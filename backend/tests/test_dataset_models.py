@@ -1,5 +1,4 @@
 import json
-import uuid
 from decimal import Decimal
 
 import pytest
@@ -103,10 +102,9 @@ async def test_asset_segment_task_batch_export_repositories(db_session: AsyncSes
     db_session.add(task)
     await db_session.flush()
 
-    task_id = uuid.uuid4()
     batch = AnnotationBatch(
         job_id=job.id,
-        task_id=task_id,
+        task_id=task.id,
         task_index=0,
         labels_json=json.dumps(
             {str(segment.id): {"topic": "billing", "sentiment": "negative"}}
@@ -138,7 +136,7 @@ async def test_asset_segment_task_batch_export_repositories(db_session: AsyncSes
 
     batches = await AnnotationBatchRepository(db_session).list_by_job_id(job.id)
     assert len(batches) == 1
-    assert batches[0].task_id == task_id
+    assert batches[0].task_id == task.id
 
     stored_export = await DatasetExportRepository(db_session).get_by_job_id(job.id)
     assert stored_export is not None
