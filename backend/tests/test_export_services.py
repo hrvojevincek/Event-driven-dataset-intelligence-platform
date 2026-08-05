@@ -45,7 +45,7 @@ def test_merge_batches_to_jsonl_orders_segments_and_includes_provenance(
         correlation_id="corr-export",
         name="Support calls",
         schema_template=SUPPORT_CALL_TEMPLATE,
-        schema_json=json.dumps(support_schema),
+        schema_json=support_schema,
         status=JobStatus.RUNNING.value,
     )
     asset = Asset(
@@ -77,22 +77,20 @@ def test_merge_batches_to_jsonl_orders_segments_and_includes_provenance(
             job_id=project_id,
             task_id=uuid.uuid4(),
             task_index=0,
-            labels_json=json.dumps(
-                {
-                    "segments": [
-                        {
-                            "segment_id": str(segment_a),
-                            "labels": {
-                                "emotion": "frustrated",
-                                "intent": "complaint",
-                                "topic": "billing",
-                                "resolution_status": "unresolved",
-                            },
-                            "confidence": 0.91,
-                        }
-                    ]
-                }
-            ),
+            labels_json={
+                "segments": [
+                    {
+                        "segment_id": str(segment_a),
+                        "labels": {
+                            "emotion": "frustrated",
+                            "intent": "complaint",
+                            "topic": "billing",
+                            "resolution_status": "unresolved",
+                        },
+                        "confidence": 0.91,
+                    }
+                ]
+            },
             segment_count=1,
             confidence=Decimal("0.9100"),
         ),
@@ -100,22 +98,20 @@ def test_merge_batches_to_jsonl_orders_segments_and_includes_provenance(
             job_id=project_id,
             task_id=uuid.uuid4(),
             task_index=1,
-            labels_json=json.dumps(
-                {
-                    "segments": [
-                        {
-                            "segment_id": str(segment_b),
-                            "labels": {
-                                "emotion": "neutral",
-                                "intent": "question",
-                                "topic": "shipping",
-                                "resolution_status": "resolved",
-                            },
-                            "confidence": 0.42,
-                        }
-                    ]
-                }
-            ),
+            labels_json={
+                "segments": [
+                    {
+                        "segment_id": str(segment_b),
+                        "labels": {
+                            "emotion": "neutral",
+                            "intent": "question",
+                            "topic": "shipping",
+                            "resolution_status": "resolved",
+                        },
+                        "confidence": 0.42,
+                    }
+                ]
+            },
             segment_count=1,
             confidence=Decimal("0.4200"),
         ),
@@ -150,7 +146,7 @@ def test_build_qc_report_flags_low_confidence_and_incomplete_coverage(
         correlation_id="corr-qc",
         name="QC run",
         schema_template=SUPPORT_CALL_TEMPLATE,
-        schema_json=json.dumps(support_schema),
+        schema_json=support_schema,
         status=JobStatus.RUNNING.value,
     )
     segment_id = uuid.uuid4()
@@ -161,22 +157,20 @@ def test_build_qc_report_flags_low_confidence_and_incomplete_coverage(
                 job_id=project.id,
                 task_id=uuid.uuid4(),
                 task_index=0,
-                labels_json=json.dumps(
-                    {
-                        "segments": [
-                            {
-                                "segment_id": str(segment_id),
-                                "labels": {
-                                    "emotion": "frustrated",
-                                    "intent": "complaint",
-                                    "topic": "billing",
-                                    "resolution_status": "unresolved",
-                                },
-                                "confidence": 0.2,
-                            }
-                        ]
-                    }
-                ),
+                labels_json={
+                    "segments": [
+                        {
+                            "segment_id": str(segment_id),
+                            "labels": {
+                                "emotion": "frustrated",
+                                "intent": "complaint",
+                                "topic": "billing",
+                                "resolution_status": "unresolved",
+                            },
+                            "confidence": 0.2,
+                        }
+                    ]
+                },
                 segment_count=1,
                 confidence=Decimal("0.2000"),
             )

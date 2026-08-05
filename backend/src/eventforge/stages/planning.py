@@ -7,7 +7,7 @@ from eventforge.core.otel import traced_stage
 from eventforge.db.models import AnnotationTask, JobStageName
 from eventforge.db.repositories import (
     AnnotationTaskRepository,
-    ProjectRepository,
+    JobRepository,
     SegmentRepository,
 )
 from eventforge.events.deterministic import deterministic_event_id
@@ -21,7 +21,7 @@ from eventforge.events.schemas import (
     build_planning_completed_event,
 )
 from eventforge.services.planning import build_annotation_tasks
-from eventforge.services.planning.task_builder import annotation_tasks_from_planned
+from eventforge.services.planning.task_builder import persist_planned_tasks
 from eventforge.stages._runtime import StageRun, parse_event
 
 
@@ -37,7 +37,7 @@ async def _load_or_create_tasks(
     if existing:
         return existing
 
-    project_repo = ProjectRepository(session)
+    project_repo = JobRepository(session)
     project = await project_repo.get_by_id(project_id)
     if project is None:
         msg = f"Project not found for planning: {project_id}"
@@ -50,9 +50,7 @@ async def _load_or_create_tasks(
         raise ValueError(msg)
 
     planned = build_annotation_tasks(project, segments, segments_per_task=segments_per_task)
-    tasks = annotation_tasks_from_planned(project_id, planned)
-    session.add_all(tasks)
-    await session.flush()
+    tasks = await persist_planned_tasks(session, project_id, planned)
     return tasks
 
 

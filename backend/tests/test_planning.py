@@ -3,7 +3,7 @@ import uuid
 
 import pytest
 
-from eventforge.db.models import Project, Segment
+from eventforge.db.models import Job, Segment
 from eventforge.services.intake.templates import (
     DOCUMENT_CLASSIFICATION_TEMPLATE,
     SUPPORT_CALL_TEMPLATE,
@@ -52,23 +52,21 @@ def test_segments_per_task_defaults_by_template() -> None:
 
 
 def test_build_annotation_tasks_batches_support_call_segments_one_per_task() -> None:
-    project = Project(
+    project = Job(
         user_id=uuid.uuid4(),
         correlation_id="corr-planning",
         name="Support batch",
         schema_template=SUPPORT_CALL_TEMPLATE,
-        schema_json=json.dumps(
-            {
-                "type": "object",
-                "properties": {
-                    "emotion": {"type": "string"},
-                    "intent": {"type": "string"},
-                    "topic": {"type": "string"},
-                    "resolution_status": {"type": "string"},
-                },
-                "required": ["emotion", "intent", "topic", "resolution_status"],
-            }
-        ),
+        schema_json={
+            "type": "object",
+            "properties": {
+                "emotion": {"type": "string"},
+                "intent": {"type": "string"},
+                "topic": {"type": "string"},
+                "resolution_status": {"type": "string"},
+            },
+            "required": ["emotion", "intent", "topic", "resolution_status"],
+        },
     )
     asset_id = uuid.uuid4()
     segments = [
@@ -87,33 +85,24 @@ def test_build_annotation_tasks_batches_support_call_segments_one_per_task() -> 
     assert planned[0].task_index == 0
     assert len(planned[0].segment_ids) == 1
     assert "support-call segment" in planned[0].instructions
-    payload = json.loads(planned[0].segment_ids_json)
-    assert payload["schema_template"] == SUPPORT_CALL_TEMPLATE
-    assert payload["label_schema"]["required"] == [
-        "emotion",
-        "intent",
-        "topic",
-        "resolution_status",
-    ]
+    assert planned[0].segment_ids[0] == segments[0].id
 
 
 def test_build_annotation_tasks_batches_document_segments() -> None:
-    project = Project(
+    project = Job(
         user_id=uuid.uuid4(),
         correlation_id="corr-docs",
         name="Docs batch",
         schema_template=DOCUMENT_CLASSIFICATION_TEMPLATE,
-        schema_json=json.dumps(
-            {
-                "type": "object",
-                "properties": {
-                    "category": {"type": "string"},
-                    "summary": {"type": "string"},
-                    "sensitivity_flag": {"type": "string"},
-                },
-                "required": ["category", "summary", "sensitivity_flag"],
-            }
-        ),
+        schema_json={
+            "type": "object",
+            "properties": {
+                "category": {"type": "string"},
+                "summary": {"type": "string"},
+                "sensitivity_flag": {"type": "string"},
+            },
+            "required": ["category", "summary", "sensitivity_flag"],
+        },
     )
     asset_id = uuid.uuid4()
     segments = [

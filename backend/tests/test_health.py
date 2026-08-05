@@ -38,8 +38,8 @@ async def test_health_ready_returns_503_when_postgres_unavailable(client: AsyncC
 
     assert response.status_code == 503
     body = response.json()
-    assert body["detail"]["status"] == "not_ready"
-    assert "postgres" in body["detail"]["checks"]
+    assert body["status"] == "not_ready"
+    assert "postgres" in body["checks"]
 
 
 async def test_api_v1_stub(client: AsyncClient) -> None:

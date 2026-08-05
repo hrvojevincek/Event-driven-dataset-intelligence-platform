@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from eventforge.db.models import (
     AnnotationBatch,
     AnnotationTask,
+    AnnotationTaskSegment,
     Asset,
     AssetFetchStatus,
     Job,
@@ -56,7 +57,7 @@ async def _seed_export_project(
         correlation_id=f"corr-export-{suffix}",
         name="Support calls export",
         schema_template=SUPPORT_CALL_TEMPLATE,
-        schema_json=json.dumps(schema),
+        schema_json=schema,
         status=JobStatus.RUNNING.value,
     )
     db_session.add(job)
@@ -92,31 +93,31 @@ async def _seed_export_project(
         job_id=job.id,
         task_index=0,
         instructions="Label support call segments.",
-        segment_ids_json=json.dumps({"segment_ids": [str(segment.id)]}),
     )
     db_session.add(task)
     await db_session.flush()
+    db_session.add(
+        AnnotationTaskSegment(task_id=task.id, segment_id=segment.id, position=0)
+    )
 
     batch = AnnotationBatch(
         job_id=job.id,
         task_id=task.id,
         task_index=0,
-        labels_json=json.dumps(
-            {
-                "segments": [
-                    {
-                        "segment_id": str(segment.id),
-                        "labels": {
-                            "emotion": "frustrated",
-                            "intent": "complaint",
-                            "topic": "billing",
-                            "resolution_status": "unresolved",
-                        },
-                        "confidence": 0.88,
-                    }
-                ]
-            }
-        ),
+        labels_json={
+            "segments": [
+                {
+                    "segment_id": str(segment.id),
+                    "labels": {
+                        "emotion": "frustrated",
+                        "intent": "complaint",
+                        "topic": "billing",
+                        "resolution_status": "unresolved",
+                    },
+                    "confidence": 0.88,
+                }
+            ]
+        },
         segment_count=1,
         confidence=Decimal("0.8800"),
     )
@@ -149,7 +150,7 @@ async def test_process_annotation_all_completed_persists_export(
     assert line["segment_id"] == str(segment.id)
     assert line["labels"]["topic"] == "billing"
 
-    qc = json.loads(export.qc_report_json)
+    qc = export.qc_report_json
     assert qc["coverage_pct"] == 100.0
     assert qc["batch_count"] == 1
 

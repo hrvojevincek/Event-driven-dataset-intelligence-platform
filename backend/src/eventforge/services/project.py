@@ -62,6 +62,8 @@ class UploadPayload:
     content: bytes
 
 
+# Service (submit_project) — real work: resolve schema template, 
+# create Job/stages/assets, write files to disk, publish project.submitted, commit.
 async def submit_project(
     session: AsyncSession,
     publisher: EventPublisher,
@@ -103,7 +105,7 @@ async def submit_project(
         correlation_id=correlation_id,
         name=name,
         description=None,
-        schema_json=json.dumps(resolved_schema),
+        schema_json=resolved_schema,
         schema_template=template_id,
         domain=domain,
         status=JobStatus.PENDING.value,
@@ -236,7 +238,7 @@ def _job_to_detail_response(
     dataset_export: DatasetExportSummaryResponse | None = None
     if job.dataset_export is not None:
         export = job.dataset_export
-        qc_data = json.loads(export.qc_report_json)
+        qc_data = export.qc_report_json
         line_count = sum(1 for line in export.export_content.splitlines() if line.strip())
         dataset_export = DatasetExportSummaryResponse(
             id=export.id,
@@ -246,8 +248,7 @@ def _job_to_detail_response(
                 coverage_pct=float(qc_data.get("coverage_pct", 0.0)),
                 schema_compliance_pct=float(qc_data.get("schema_compliance_pct", 0.0)),
                 low_confidence_segment_ids=[
-                    str(segment_id)
-                    for segment_id in qc_data.get("low_confidence_segment_ids", [])
+                    str(segment_id) for segment_id in qc_data.get("low_confidence_segment_ids", [])
                 ],
                 total_cost_usd=float(qc_data.get("total_cost_usd", 0.0)),
                 segment_count=int(qc_data.get("segment_count", 0)),
@@ -264,7 +265,7 @@ def _job_to_detail_response(
         schema_template=job.schema_template,
         domain=job.domain,
         status=job.status,
-        label_schema_json=job.schema_json,
+        label_schema_json=json.dumps(job.schema_json),
         created_at=job.created_at,
         updated_at=job.updated_at,
         stages=[

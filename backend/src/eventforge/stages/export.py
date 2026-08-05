@@ -12,7 +12,7 @@ from eventforge.db.repositories import (
     AnnotationBatchRepository,
     AssetRepository,
     DatasetExportRepository,
-    ProjectRepository,
+    JobRepository,
     SegmentRepository,
 )
 from eventforge.db.repositories.llm_usage import LLMUsageRepository
@@ -43,7 +43,7 @@ async def _load_or_create_export(
         segment_count = existing.export_content.count("\n") if existing.export_content else 0
         return existing, len(batches), segment_count
 
-    project_repo = ProjectRepository(session)
+    project_repo = JobRepository(session)
     project = await project_repo.get_by_id(project_id)
     if project is None:
         msg = f"Project not found for export: {project_id}"
@@ -73,7 +73,7 @@ async def _load_or_create_export(
     export = DatasetExport(
         job_id=project_id,
         export_content=merge_result.jsonl,
-        qc_report_json=qc_report.to_json(),
+        qc_report_json=qc_report.to_dict(),
     )
     session.add(export)
     await session.flush()

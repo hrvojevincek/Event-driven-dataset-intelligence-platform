@@ -71,7 +71,7 @@ async def _seed_project_with_tasks(
         correlation_id=f"corr-annotation-{suffix}",
         name="Support calls batch",
         schema_template=SUPPORT_CALL_TEMPLATE,
-        schema_json=json.dumps(schema),
+        schema_json=schema,
         status=JobStatus.RUNNING.value,
     )
     db_session.add(job)

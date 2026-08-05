@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
-from eventforge.db.models import Project
+from eventforge.db.models import Job
 from eventforge.services.export.merge import ExportRecord
 from eventforge.services.planning.schema_templates import load_label_schema
 
@@ -27,20 +27,20 @@ class QCReport:
     batch_count: int
     flags: list[str]
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "coverage_pct": self.coverage_pct,
+            "schema_compliance_pct": self.schema_compliance_pct,
+            "low_confidence_segment_ids": self.low_confidence_segment_ids,
+            "total_cost_usd": self.total_cost_usd,
+            "segment_count": self.segment_count,
+            "labeled_count": self.labeled_count,
+            "batch_count": self.batch_count,
+            "flags": self.flags,
+        }
+
     def to_json(self) -> str:
-        return json.dumps(
-            {
-                "coverage_pct": self.coverage_pct,
-                "schema_compliance_pct": self.schema_compliance_pct,
-                "low_confidence_segment_ids": self.low_confidence_segment_ids,
-                "total_cost_usd": self.total_cost_usd,
-                "segment_count": self.segment_count,
-                "labeled_count": self.labeled_count,
-                "batch_count": self.batch_count,
-                "flags": self.flags,
-            },
-            ensure_ascii=False,
-        )
+        return json.dumps(self.to_dict(), ensure_ascii=False)
 
 
 def _required_fields(label_schema: dict[str, Any]) -> list[str]:
@@ -59,7 +59,7 @@ def _labels_complete(labels: dict[str, str], required: list[str]) -> bool:
 
 def build_qc_report(
     *,
-    project: Project,
+    project: Job,
     records: list[ExportRecord],
     total_segments: int,
     batch_count: int,

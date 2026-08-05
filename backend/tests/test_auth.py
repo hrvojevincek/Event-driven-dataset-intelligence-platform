@@ -72,7 +72,7 @@ async def test_download_export_returns_404_for_other_users_job(
         user_id=owner.id,
         correlation_id=uuid.uuid4().hex,
         name="Private project",
-        schema_json="{}",
+        schema_json={},
         status=JobStatus.PENDING.value,
     )
     db_session.add(job)

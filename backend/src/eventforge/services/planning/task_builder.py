@@ -1,11 +1,12 @@
 """Build annotation tasks from preprocessed segments and project schema."""
 
-import json
 import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from eventforge.db.models import AnnotationTask, Project, Segment
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from eventforge.db.models import AnnotationTask, AnnotationTaskSegment, Job, Segment
 from eventforge.services.intake.templates import (
     DOCUMENT_CLASSIFICATION_TEMPLATE,
     SUPPORT_CALL_TEMPLATE,
@@ -23,11 +24,10 @@ class PlannedTask:
     task_index: int
     instructions: str
     segment_ids: list[uuid.UUID]
-    segment_ids_json: str
 
 
 def build_annotation_tasks(
-    project: Project,
+    project: Job,
     segments: list[Segment],
     *,
     segments_per_task: int | None = None,
@@ -55,31 +55,39 @@ def build_annotation_tasks(
                 task_index=task_index,
                 instructions=instructions,
                 segment_ids=segment_ids,
-                segment_ids_json=_encode_segment_payload(
-                    segment_ids=segment_ids,
-                    label_schema=label_schema,
-                    schema_template=project.schema_template,
-                ),
             )
         )
     return planned
 
 
-def annotation_tasks_from_planned(
+async def persist_planned_tasks(
+    session: AsyncSession,
     project_id: uuid.UUID,
     planned: list[PlannedTask],
 ) -> list[AnnotationTask]:
-    """Materialize ORM rows from planned tasks."""
-    return [
+    """Materialize annotation tasks and ordered segment links."""
+    tasks = [
         AnnotationTask(
             job_id=project_id,
             task_index=task.task_index,
             instructions=task.instructions,
-            segment_ids_json=task.segment_ids_json,
         )
         for task in planned
     ]
+    session.add_all(tasks)
+    await session.flush()
 
+    for task, plan in zip(tasks, planned, strict=True):
+        for position, segment_id in enumerate(plan.segment_ids):
+            session.add(
+                AnnotationTaskSegment(
+                    task_id=task.id,
+                    segment_id=segment_id,
+                    position=position,
+                )
+            )
+    await session.flush()
+    return tasks
 
 def _build_instructions(label_schema: dict[str, Any], template_id: str | None) -> str:
     required = label_schema.get("required", list(label_schema.get("properties", {}).keys()))
@@ -89,18 +97,3 @@ def _build_instructions(label_schema: dict[str, Any], template_id: str | None) -
     if template_id == DOCUMENT_CLASSIFICATION_TEMPLATE:
         return f"Classify each document segment with: {fields}."
     return f"Label each segment with: {fields}."
-
-
-def _encode_segment_payload(
-    *,
-    segment_ids: list[uuid.UUID],
-    label_schema: dict[str, Any],
-    schema_template: str | None,
-) -> str:
-    payload: dict[str, Any] = {
-        "segment_ids": [str(segment_id) for segment_id in segment_ids],
-        "label_schema": label_schema,
-    }
-    if schema_template:
-        payload["schema_template"] = schema_template
-    return json.dumps(payload)

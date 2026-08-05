@@ -95,7 +95,7 @@ async def test_create_project_stores_assets_and_publishes(
 
     job = await db_session.get(Job, job_id)
     assert job is not None
-    schema = json.loads(job.schema_json)
+    schema = job.schema_json
     assert "emotion" in schema["properties"]
 
     project_dir = upload_root / str(job_id)
@@ -157,7 +157,7 @@ async def test_download_project_export_returns_jsonl(
         correlation_id="corr-export-download",
         name="Export download",
         schema_template="support_call",
-        schema_json='{"type":"object","properties":{}}',
+        schema_json={"type": "object", "properties": {}},
         status=JobStatus.COMPLETED.value,
     )
     db_session.add(job)
@@ -175,7 +175,7 @@ async def test_download_project_export_returns_jsonl(
         DatasetExport(
             job_id=job.id,
             export_content=f"{export_line}\n",
-            qc_report_json=json.dumps({"coverage_pct": 100.0}),
+            qc_report_json={"coverage_pct": 100.0},
         )
     )
     await db_session.flush()
@@ -209,7 +209,7 @@ async def test_list_projects_returns_user_jobs(
         correlation_id="corr-list-projects",
         name="Listed project",
         schema_template="support_call",
-        schema_json='{"type":"object","properties":{}}',
+        schema_json={"type": "object", "properties": {}},
         status=JobStatus.PENDING.value,
     )
     db_session.add(job)
@@ -248,7 +248,7 @@ async def test_get_project_detail_returns_stages_and_assets(
         correlation_id="corr-detail-project",
         name="Detail project",
         schema_template="support_call",
-        schema_json='{"type":"object","properties":{"topic":{"type":"string"}}}',
+        schema_json={"type": "object", "properties": {"topic": {"type": "string"}}},
         status=JobStatus.RUNNING.value,
     )
     db_session.add(job)
@@ -296,7 +296,7 @@ async def test_delete_project_removes_job(
         correlation_id="corr-delete-project",
         name="Delete me",
         schema_template="support_call",
-        schema_json='{"type":"object","properties":{}}',
+        schema_json={"type": "object", "properties": {}},
         status=JobStatus.PENDING.value,
     )
     db_session.add(job)

@@ -36,7 +36,7 @@ async def test_user_and_job_repositories(db_session: AsyncSession) -> None:
         user_id=user.id,
         correlation_id="corr-test-123",
         name="What is event-driven architecture?",
-        schema_json="{}",
+        schema_json={},
         status=JobStatus.PENDING.value,
     )
     db_session.add(job)

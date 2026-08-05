@@ -6,10 +6,8 @@ from unittest.mock import AsyncMock
 from eventforge.db.models import Segment
 from eventforge.services.annotation.labeler import (
     build_labels_json,
-    decode_task_payload,
     label_segments,
 )
-from eventforge.services.intake.templates import SUPPORT_CALL_TEMPLATE
 from eventforge.services.llm.client import LLMClient
 from eventforge.services.llm.types import LLMCompletionResult
 
@@ -25,23 +23,6 @@ def _support_schema() -> dict:
         },
         "required": ["emotion", "intent", "topic", "resolution_status"],
     }
-
-
-def test_decode_task_payload_reads_planning_encoding() -> None:
-    segment_ids = [uuid.uuid4(), uuid.uuid4()]
-    encoded = json.dumps(
-        {
-            "segment_ids": [str(segment_id) for segment_id in segment_ids],
-            "label_schema": _support_schema(),
-            "schema_template": SUPPORT_CALL_TEMPLATE,
-        }
-    )
-
-    decoded_ids, schema, template = decode_task_payload(encoded)
-
-    assert decoded_ids == segment_ids
-    assert schema["required"] == ["emotion", "intent", "topic", "resolution_status"]
-    assert template == SUPPORT_CALL_TEMPLATE
 
 
 def test_build_labels_json_serializes_segments() -> None:
@@ -62,7 +43,7 @@ def test_build_labels_json_serializes_segments() -> None:
             )
         ]
     )
-    parsed = json.loads(payload)
+    parsed = payload
     assert parsed["segments"][0]["segment_id"] == str(segment_id)
     assert parsed["segments"][0]["labels"]["topic"] == "billing"
 

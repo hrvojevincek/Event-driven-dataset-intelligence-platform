@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from eventforge.db.models import AnnotationBatch, Asset, Project, Segment
+from eventforge.db.models import AnnotationBatch, Asset, Job, Segment
 
 ANNOTATOR_VERSION = "llm-v1"
 
@@ -32,14 +32,17 @@ class MergeResult:
 
 
 def _parse_batch_labels(
-    labels_json: str,
+    labels_json: dict[str, Any] | str,
 ) -> list[tuple[uuid.UUID, dict[str, str], float]]:
     """Parse AnnotationBatch.labels_json into per-segment label tuples."""
-    try:
-        parsed = json.loads(labels_json)
-    except json.JSONDecodeError as exc:
-        msg = "labels_json must be valid JSON"
-        raise ValueError(msg) from exc
+    if isinstance(labels_json, str):
+        try:
+            parsed = json.loads(labels_json)
+        except json.JSONDecodeError as exc:
+            msg = "labels_json must be valid JSON"
+            raise ValueError(msg) from exc
+    else:
+        parsed = labels_json
 
     if isinstance(parsed, dict) and "segments" in parsed:
         raw_segments = parsed.get("segments")
@@ -101,7 +104,7 @@ def _record_to_line(record: ExportRecord) -> str:
 
 
 def merge_batches_to_jsonl(
-    project: Project,
+    project: Job,
     batches: list[AnnotationBatch],
     segments: list[Segment],
     assets_by_id: dict[uuid.UUID, Asset],

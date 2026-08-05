@@ -2,6 +2,7 @@ from eventforge.db.models.base import (
     PIPELINE_STAGE_NAMES,
     AnnotationBatch,
     AnnotationTask,
+    AnnotationTaskSegment,
     Asset,
     AssetFetchStatus,
     Base,
@@ -17,35 +18,22 @@ from eventforge.db.models.base import (
     User,
 )
 
-# Deprecated aliases — removed when legacy agent code is deleted (Phase 3+).
-Project = Job
-Source = Asset
-DocumentChunk = Segment
-KnowledgeEntity = AnnotationTask
-ResearchNote = AnnotationBatch
-SynthesisReport = DatasetExport
-
 __all__ = [
     "AnnotationBatch",
     "AnnotationTask",
+    "AnnotationTaskSegment",
     "Asset",
     "AssetFetchStatus",
     "Base",
     "DatasetExport",
-    "DocumentChunk",
     "Job",
     "JobStage",
     "JobStageName",
     "JobStatus",
-    "KnowledgeEntity",
     "LLMUsage",
     "PIPELINE_STAGE_NAMES",
     "ProcessedEvent",
-    "Project",
-    "ResearchNote",
     "Segment",
-    "Source",
     "StageStatus",
-    "SynthesisReport",
     "User",
 ]

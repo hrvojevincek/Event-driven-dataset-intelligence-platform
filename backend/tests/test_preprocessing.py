@@ -65,7 +65,7 @@ async def _seed_project_with_assets(
         user_id=user.id,
         correlation_id=f"corr-preprocess-{suffix}",
         name="Support calls batch",
-        schema_json='{"type":"object"}',
+        schema_json={"type": "object"},
         schema_template="support_call",
         status=JobStatus.RUNNING.value,
     )

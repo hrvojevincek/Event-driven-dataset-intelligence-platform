@@ -31,14 +31,14 @@ from eventforge.events.schemas import (
     build_annotation_task_completed_event,
     build_annotation_task_dispatched_event,
 )
-from eventforge.services.annotation import decode_task_payload, label_segments
+from eventforge.services.annotation import label_segments
 from eventforge.services.llm.client import LLMClient, get_llm_client
+from eventforge.services.planning.schema_templates import load_label_schema
 from eventforge.stages._runtime import StageRun, parse_event
 
 
 def _segment_ids_for_task(task: AnnotationTask) -> list[uuid.UUID]:
-    segment_ids, _, _ = decode_task_payload(task.segment_ids_json)
-    return segment_ids
+    return task.segment_ids
 
 
 async def _build_dispatched_events(
@@ -74,6 +74,7 @@ async def _load_or_create_batch(
     event: AnnotationTaskDispatchedEvent,
     *,
     llm_client: LLMClient,
+    label_schema: dict,
 ) -> AnnotationBatch:
     batch_repo = AnnotationBatchRepository(session)
     existing = await batch_repo.get_by_task_id(event.payload.task_id)
@@ -85,9 +86,7 @@ async def _load_or_create_batch(
     if not tasks:
         msg = f"Annotation task not found: {event.payload.task_id}"
         raise ValueError(msg)
-    task = tasks[0]
 
-    _, label_schema, _ = decode_task_payload(task.segment_ids_json)
     segment_repo = SegmentRepository(session)
     segments = await segment_repo.list_by_ids(event.payload.segment_ids)
     if len(segments) != len(event.payload.segment_ids):
@@ -187,8 +186,14 @@ async def process_annotation_task_dispatched(
         return None
 
     await run.require_stage(JobStageName.ANNOTATION)
+    label_schema = load_label_schema(run.project.schema_json, run.project.schema_template)
     llm_client = llm_client or get_llm_client(session=session)
-    batch = await _load_or_create_batch(session, event, llm_client=llm_client)
+    batch = await _load_or_create_batch(
+        session,
+        event,
+        llm_client=llm_client,
+        label_schema=label_schema,
+    )
 
     completed_event = build_annotation_task_completed_event(
         job_id=run.project.id,

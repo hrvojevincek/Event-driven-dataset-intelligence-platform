@@ -9,30 +9,16 @@ from eventforge.db.repositories.processed_event import ProcessedEventRepository
 from eventforge.db.repositories.segment import SegmentRepository
 from eventforge.db.repositories.user import UserRepository
 
-# Deprecated aliases — removed when legacy agent code is deleted (Phase 3+).
-ProjectRepository = JobRepository
-DocumentChunkRepository = SegmentRepository
-KnowledgeEntityRepository = AnnotationTaskRepository
-ResearchNoteRepository = AnnotationBatchRepository
-SourceRepository = AssetRepository
-SynthesisReportRepository = DatasetExportRepository
-
 __all__ = [
     "AnnotationBatchRepository",
     "AnnotationTaskRepository",
     "AssetRepository",
     "BaseRepository",
     "DatasetExportRepository",
-    "DocumentChunkRepository",
     "JobRepository",
     "JobStageRepository",
-    "KnowledgeEntityRepository",
     "LLMUsageRepository",
     "ProcessedEventRepository",
-    "ProjectRepository",
-    "ResearchNoteRepository",
     "SegmentRepository",
-    "SourceRepository",
-    "SynthesisReportRepository",
     "UserRepository",
 ]

@@ -1,19 +1,19 @@
 import json
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from eventforge.api.deps import get_current_user, get_db, get_publisher, get_settings
+from eventforge.api.deps import get_current_user, get_db, get_publisher
+from eventforge.api.errors import NotFoundError, UpstreamError, ValidationAppError
 from eventforge.api.schemas.projects import (
     ProjectDetailResponse,
     ProjectSummaryResponse,
     SubmitProjectResponse,
 )
-from eventforge.core.config import Settings
 from eventforge.db.models import User
-from eventforge.db.repositories import DatasetExportRepository, ProjectRepository
+from eventforge.db.repositories import DatasetExportRepository, JobRepository
 from eventforge.events.publisher import EventPublisher, EventPublishError
 from eventforge.services.project import (
     UploadPayload,
@@ -40,22 +40,15 @@ async def create_project(
     db: AsyncSession = Depends(get_db),
     publisher: EventPublisher = Depends(get_publisher),
     current_user: User = Depends(get_current_user),
-    settings: Settings = Depends(get_settings),
 ) -> SubmitProjectResponse:
     parsed_schema: dict | None = None
     if schema_json_override:
         try:
             loaded = json.loads(schema_json_override)
         except json.JSONDecodeError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={"message": "schema_json must be valid JSON"},
-            ) from exc
+            raise ValidationAppError("schema_json must be valid JSON") from exc
         if not isinstance(loaded, dict):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={"message": "schema_json must be a JSON object"},
-            )
+            raise ValidationAppError("schema_json must be a JSON object")
         parsed_schema = loaded
 
     uploads: list[UploadPayload] = []
@@ -81,18 +74,12 @@ async def create_project(
         )
     except ValueError as exc:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"message": str(exc)},
-        ) from exc
+        raise ValidationAppError(str(exc)) from exc
     except EventPublishError as exc:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail={
-                "message": "Failed to publish project.submitted event",
-                "error": str(exc),
-            },
+        raise UpstreamError(
+            "Failed to publish project.submitted event",
+            error=str(exc),
         ) from exc
 
     return SubmitProjectResponse(
@@ -118,10 +105,7 @@ async def get_project(
 ) -> ProjectDetailResponse:
     detail = await get_project_detail(db, project_id, current_user)
     if detail is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"message": "Project not found"},
-        )
+        raise NotFoundError("Project not found")
     return detail
 
 
@@ -133,10 +117,7 @@ async def remove_project(
 ) -> None:
     deleted = await delete_project(db, project_id, current_user)
     if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"message": "Project not found"},
-        )
+        raise NotFoundError("Project not found")
 
 
 @router.get("/projects/{project_id}/export")
@@ -146,28 +127,19 @@ async def download_project_export(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
-    project = await ProjectRepository(db).get_by_id(project_id)
+    project = await JobRepository(db).get_by_id(project_id)
     if project is None or project.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"message": "Project not found"},
-        )
+        raise NotFoundError("Project not found")
 
     export = await DatasetExportRepository(db).get_by_job_id(project_id)
     if export is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"message": "Export not ready"},
-        )
+        raise NotFoundError("Export not ready")
 
     if format == "qc":
-        return JSONResponse(content=json.loads(export.qc_report_json))
+        return JSONResponse(content=export.qc_report_json)
 
     if format != "jsonl":
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"message": "format must be 'jsonl' or 'qc'"},
-        )
+        raise ValidationAppError("format must be 'jsonl' or 'qc'")
 
     return Response(
         content=export.export_content,

@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from eventforge import __version__
+from eventforge.api.handlers import register_exception_handlers
 from eventforge.api.routes import health, v1
 from eventforge.core.config import get_settings
 from eventforge.core.logging import setup_logging
@@ -29,6 +30,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,10 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from eventforge.api.deps import get_current_user, get_db
+from eventforge.api.errors import NotFoundError
 from eventforge.db.models import User
 from eventforge.db.repositories import JobRepository
 from eventforge.services.stage_stream import (
@@ -23,8 +24,7 @@ async def _assert_job_access(
 ) -> None:
     job = await JobRepository(db).get_by_id(job_id)
     if job is None or job.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+        raise NotFoundError("Job not found")
 
 
 @router.get("/projects/{project_id}/stream")
