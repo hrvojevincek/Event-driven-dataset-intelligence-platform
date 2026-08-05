@@ -7,10 +7,6 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from eventforge.agents.planning import (
-    parse_preprocessing_completed_event,
-    process_preprocessing_completed,
-)
 from eventforge.db.models import (
     AnnotationTask,
     Asset,
@@ -32,6 +28,10 @@ from eventforge.events.schemas import (
     build_preprocessing_completed_event,
 )
 from eventforge.services.intake.templates import SUPPORT_CALL_TEMPLATE
+from eventforge.stages.planning import (
+    parse_preprocessing_completed_event,
+    process_preprocessing_completed,
+)
 from eventforge.workers.planning import PlanningWorker
 
 

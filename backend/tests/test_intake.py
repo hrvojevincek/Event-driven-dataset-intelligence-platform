@@ -8,7 +8,6 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from eventforge.agents.intake import parse_project_submitted_event, process_project_submitted
 from eventforge.core.config import Settings, get_settings
 from eventforge.db.models import (
     Asset,
@@ -29,6 +28,7 @@ from eventforge.events.schemas import (
     build_project_submitted_event,
 )
 from eventforge.services.storage.local import LocalStorage
+from eventforge.stages.intake import parse_project_submitted_event, process_project_submitted
 from eventforge.workers.intake import IntakeWorker
 
 settings = get_settings()

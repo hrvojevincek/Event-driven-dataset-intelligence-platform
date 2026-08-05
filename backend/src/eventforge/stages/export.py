@@ -1,4 +1,4 @@
-"""Export stage agent — merge annotation batches into JSONL and QC report."""
+"""Export stage — merge annotation batches into JSONL and QC report."""
 
 from __future__ import annotations
 
@@ -6,20 +6,18 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from eventforge.core.otel import traced_agent
+from eventforge.core.otel import traced_stage
 from eventforge.db.models import DatasetExport, JobStageName, JobStatus
 from eventforge.db.repositories import (
     AnnotationBatchRepository,
     AssetRepository,
     DatasetExportRepository,
-    ProcessedEventRepository,
     ProjectRepository,
     SegmentRepository,
 )
-from eventforge.db.repositories.job import JobStageRepository
 from eventforge.db.repositories.llm_usage import LLMUsageRepository
 from eventforge.events.deterministic import deterministic_event_id
-from eventforge.events.publisher import EVENT_SOURCE_EXPORT, EventPublisher, EventPublishError
+from eventforge.events.publisher import EVENT_SOURCE_EXPORT, EventPublisher
 from eventforge.events.schemas import (
     DETAIL_TYPE_EXPORT_COMPLETED,
     WORKER_NAME_EXPORT,
@@ -29,6 +27,7 @@ from eventforge.events.schemas import (
 )
 from eventforge.events.schemas.constants import DETAIL_TYPE_ANNOTATION_ALL_COMPLETED
 from eventforge.services.export import build_qc_report, merge_batches_to_jsonl
+from eventforge.stages._runtime import StageRun, parse_event
 
 
 async def _load_or_create_export(
@@ -81,73 +80,49 @@ async def _load_or_create_export(
     return export, len(batches), merge_result.segment_count
 
 
-@traced_agent(WORKER_NAME_EXPORT)
+@traced_stage(WORKER_NAME_EXPORT)
 async def process_annotation_all_completed(
     session: AsyncSession,
     publisher: EventPublisher,
     event: AnnotationAllCompletedEvent,
 ) -> ExportCompletedEvent | None:
     """Run export after all annotation tasks finish. Returns None if already processed."""
-    processed_repo = ProcessedEventRepository(session)
-    event_id = str(event.event_id)
-
-    if not await processed_repo.try_claim(event_id, WORKER_NAME_EXPORT):
-        return None
-
-    project_repo = ProjectRepository(session)
-    stage_repo = JobStageRepository(session)
-
-    project = await project_repo.get_by_id(event.job_id)
-    if project is None:
-        msg = f"Project not found for export: {event.job_id}"
-        raise ValueError(msg)
-
-    batch_count = await AnnotationBatchRepository(session).count_by_job_id(project.id)
-    if batch_count < event.payload.task_count:
-        await processed_repo.release_claim(event_id, WORKER_NAME_EXPORT)
-        await session.commit()
-        return None
-
-    export_stage = await stage_repo.get_by_job_and_stage(
-        project.id,
-        JobStageName.EXPORT.value,
+    run = await StageRun.begin(
+        session,
+        publisher,
+        event,
+        worker_name=WORKER_NAME_EXPORT,
     )
-    if export_stage is None:
-        msg = f"Export stage missing for project: {project.id}"
-        raise ValueError(msg)
+    if run is None:
+        return None
 
-    await stage_repo.mark_running(export_stage)
+    batch_count = await AnnotationBatchRepository(session).count_by_job_id(run.project.id)
+    if batch_count < event.payload.task_count:
+        await run.defer()
+        return None
+
+    export_stage = await run.require_stage(JobStageName.EXPORT)
+    await run.mark_running(export_stage)
     export, batch_count, segment_count = await _load_or_create_export(
         session,
-        project.id,
+        run.project.id,
         expected_task_count=event.payload.task_count,
     )
 
     completed_event = build_export_completed_event(
-        job_id=project.id,
+        job_id=run.project.id,
         correlation_id=event.correlation_id,
         export_id=export.id,
         batch_count=batch_count,
         segment_count=segment_count or None,
-        event_id=deterministic_event_id(project.id, DETAIL_TYPE_EXPORT_COMPLETED),
+        event_id=deterministic_event_id(run.project.id, DETAIL_TYPE_EXPORT_COMPLETED),
     )
 
-    project.status = JobStatus.COMPLETED.value
-    await stage_repo.mark_completed(export_stage)
-    await session.commit()
-
-    try:
-        await publisher.publish(completed_event, source=EVENT_SOURCE_EXPORT)
-    except EventPublishError:
-        await processed_repo.release_claim(event_id, WORKER_NAME_EXPORT)
-        await session.commit()
-        raise
-
+    run.project.status = JobStatus.COMPLETED.value
+    await run.complete_stage(export_stage)
+    await run.publish(completed_event, source=EVENT_SOURCE_EXPORT)
     return completed_event
 
 
 def parse_annotation_all_completed_event(detail: dict) -> AnnotationAllCompletedEvent:
-    if detail.get("detail_type") != DETAIL_TYPE_ANNOTATION_ALL_COMPLETED:
-        msg = f"Unexpected detail_type: {detail.get('detail_type')}"
-        raise ValueError(msg)
-    return AnnotationAllCompletedEvent.model_validate(detail)
+    return parse_event(detail, DETAIL_TYPE_ANNOTATION_ALL_COMPLETED, AnnotationAllCompletedEvent)

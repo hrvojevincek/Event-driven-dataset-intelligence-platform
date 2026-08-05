@@ -124,10 +124,10 @@ def agent_span(
         yield span
 
 
-def traced_agent(agent_name: str, action: str = "process") -> Callable[[
+def traced_stage(stage_name: str, action: str = "process") -> Callable[[
     Callable[P, R]],
         Callable[P, R]]:
-    """Decorator for async agent handlers that receive an event as the third argument."""
+    """Decorator for async stage handlers that receive an event as the third argument."""
 
     def decorator(fn: Callable[P, R]) -> Callable[P, R]:
         @wraps(fn)
@@ -143,7 +143,7 @@ def traced_agent(agent_name: str, action: str = "process") -> Callable[[
                            ) if event is not None else None
 
             with agent_span(
-                agent_name,
+                stage_name,
                 action,
                 correlation_id=correlation_id,
                 job_id=job_id,
@@ -154,3 +154,7 @@ def traced_agent(agent_name: str, action: str = "process") -> Callable[[
         return wrapper  # type: ignore[return-value]
 
     return decorator
+
+
+# Backward-compatible alias — prefer traced_stage in new code.
+traced_agent = traced_stage

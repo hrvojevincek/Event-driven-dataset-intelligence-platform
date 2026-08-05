@@ -1,5 +1,5 @@
 ---
-description: FastAPI backend conventions — API, DB, workers, agents
+description: FastAPI backend conventions — API, DB, workers, stages
 globs: backend/**
 alwaysApply: false
 ---
@@ -15,7 +15,7 @@ eventforge/
 ├── main.py           # FastAPI app entry
 ├── api/routes/       # HTTP endpoints
 ├── api/deps.py       # Auth, DB session deps
-├── agents/           # ingestion, embedding, knowledge, research, synthesis
+├── stages/           # pipeline stage handlers (intake, preprocessing, planning, annotation, export)
 ├── workers/          # SQS long-poll consumers (one module per stage)
 ├── events/           # publisher + Pydantic event schemas
 ├── db/models/        # SQLAlchemy 2.0 models
@@ -39,7 +39,7 @@ Every class needs a one-line docstring describing its role:
 
 ```python
 class IngestionWorker(SqsConsumer):
-    """Consumes query.submitted events and runs the ingestion agent."""
+    """Consumes project.submitted events and runs the intake stage."""
 ```
 
 Apply to ORM models, repositories, workers, Pydantic schemas (request/response + event payload/event pairs), services, and exceptions. Match existing tone — purpose, not a field inventory. Non-obvious public methods may get a short docstring too.

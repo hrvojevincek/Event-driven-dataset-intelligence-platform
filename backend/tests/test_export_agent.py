@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from eventforge.agents.export import process_annotation_all_completed
 from eventforge.db.models import (
     AnnotationBatch,
     AnnotationTask,
@@ -27,6 +26,7 @@ from eventforge.events.schemas import (
     build_annotation_all_completed_event,
 )
 from eventforge.services.intake.templates import SUPPORT_CALL_TEMPLATE
+from eventforge.stages.export import process_annotation_all_completed
 from eventforge.workers.export import ExportWorker
 
 

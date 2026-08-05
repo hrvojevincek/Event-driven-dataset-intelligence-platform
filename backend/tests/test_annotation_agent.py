@@ -8,12 +8,6 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from eventforge.agents.annotation import (
-    parse_annotation_task_dispatched_event,
-    parse_planning_completed_event,
-    process_annotation_task_dispatched,
-    process_planning_completed,
-)
 from eventforge.db.models import (
     AnnotationBatch,
     AnnotationTask,
@@ -42,6 +36,12 @@ from eventforge.services.llm.client import LLMClient
 from eventforge.services.llm.types import LLMCompletionResult
 from eventforge.services.planning import build_annotation_tasks
 from eventforge.services.planning.task_builder import annotation_tasks_from_planned
+from eventforge.stages.annotation import (
+    parse_annotation_task_dispatched_event,
+    parse_planning_completed_event,
+    process_annotation_task_dispatched,
+    process_planning_completed,
+)
 from eventforge.workers.annotation import AnnotationWorker
 
 
