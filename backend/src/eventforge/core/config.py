@@ -68,6 +68,10 @@ class Settings(BaseSettings):
 
     research_orchestration_mode: Literal["local", "step_functions"] = "local"
 
+    upload_root: str = "data/uploads"
+    max_upload_file_bytes: int = 50 * 1024 * 1024
+    max_upload_files_per_project: int = 50
+
     @field_validator("mock_external_apis", mode="before")
     @classmethod
     def _empty_mock_flag(cls, value: object) -> object:

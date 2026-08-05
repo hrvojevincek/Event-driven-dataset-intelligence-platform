@@ -1,54 +1,8 @@
-import logging
-from typing import Any
+"""Legacy entry point — delegates to the dataset intake worker."""
 
-from eventforge.agents.ingestion import parse_query_submitted_event, process_query_submitted
-from eventforge.core.config import get_settings
-from eventforge.db.session import get_session_factory
-from eventforge.events.parser import parse_eventbridge_sqs_body
-from eventforge.events.publisher import EventPublisher
-from eventforge.workers.base import SqsConsumer
-from eventforge.workers.bootstrap import main
+from eventforge.workers.intake import IngestionWorker, IntakeWorker, main
 
-logger = logging.getLogger(__name__)
-
-
-class IngestionWorker(SqsConsumer):
-    """Consumes query.submitted events and runs the ingestion agent."""
-
-    def __init__(self) -> None:
-        settings = get_settings()
-        super().__init__(settings.ingestion_queue_name, settings)
-        self._publisher = EventPublisher(settings)
-        self._session_factory = get_session_factory(settings)
-
-    async def handle_message(self, message: dict[str, Any]) -> None:
-        detail = parse_eventbridge_sqs_body(message["Body"])
-        event = parse_query_submitted_event(detail)
-
-        async with self._session_factory() as session:
-            result = await process_query_submitted(session, self._publisher, event)
-
-        if result is None:
-            logger.info(
-                "Skipped duplicate query.submitted",
-                extra={
-                    "event_id": str(event.event_id),
-                    "job_id": str(event.job_id),
-                    "correlation_id": event.correlation_id,
-                },
-            )
-            return
-
-        logger.info(
-            "Ingestion completed",
-            extra={
-                "event_id": str(event.event_id),
-                "job_id": str(event.job_id),
-                "correlation_id": event.correlation_id,
-                "source_count": result.payload.source_count,
-            },
-        )
-
+__all__ = ["IngestionWorker", "IntakeWorker", "main"]
 
 if __name__ == "__main__":
-    main(IngestionWorker, service_suffix="ingestion")
+    main(IntakeWorker, service_suffix="ingestion")

@@ -44,7 +44,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 | 0     | Decisions & docs    | ✅ Done        |
 | 1     | Data model          | ✅ Done        |
 | 2     | Event contracts     | ✅ Done        |
-| 3     | Intake stage        | ⬜ Not started |
+| 3     | Intake stage        | ✅ Done        |
 | 4     | Preprocessing stage | ⬜ Not started |
 | 5     | Planning stage      | ⬜ Not started |
 | 6     | Annotation stage    | ⬜ Not started |
@@ -55,7 +55,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 
 **Legend:** ⬜ Not started · 🟡 In progress · ✅ Done
 
-**Next:** Phase 3 — Intake stage
+**Next:** Phase 4 — Preprocessing stage
 
 ---
 
@@ -142,12 +142,12 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 **Replaces:** `agents/ingestion.py`, Tavily, `POST /queries`
 
-- [ ] `services/storage/local.py` — save uploads to `./data/uploads/{project_id}/`
-- [ ] `services/intake/` — file validation, mime detection, provenance metadata
-- [ ] `agents/intake.py` + `workers/intake.py`
-- [ ] `api/routes/projects.py` — `POST /api/v1/projects` (multipart + `schema_template` or `schema_json`)
-- [ ] `services/project.py` (rename from `query.py`) — emit `project.submitted`
-- [ ] Delete Tavily from intake path
+- [x] `services/storage/local.py` — save uploads to `./data/uploads/{project_id}/`
+- [x] `services/intake/` — file validation, mime detection, provenance metadata
+- [x] `agents/intake.py` + `workers/intake.py`
+- [x] `api/routes/projects.py` — `POST /api/v1/projects` (multipart + `schema_template` or `schema_json`)
+- [x] `services/project.py` (rename from `query.py`) — emit `project.submitted`
+- [x] Delete Tavily from intake path
 
 **Exit:** Upload 5 files → assets in DB → `intake.completed` on LocalStack.
 
