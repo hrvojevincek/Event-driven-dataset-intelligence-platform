@@ -13,6 +13,8 @@ from eventforge.agents.planning import (
 )
 from eventforge.db.models import (
     AnnotationTask,
+    Asset,
+    AssetFetchStatus,
     Job,
     JobStage,
     JobStageName,
@@ -70,11 +72,21 @@ async def _seed_project_with_segments(
     )
     db_session.add(stage)
 
-    asset_id = uuid.uuid4()
+    asset = Asset(
+        job_id=job.id,
+        filename="call_001.txt",
+        mime_type="text/plain",
+        storage_uri="file:///tmp/call_001.txt",
+        byte_size=128,
+        fetch_status=AssetFetchStatus.OK.value,
+    )
+    db_session.add(asset)
+    await db_session.flush()
+
     segments = [
         Segment(
             job_id=job.id,
-            asset_id=asset_id,
+            asset_id=asset.id,
             segment_index=index,
             content=f"Customer utterance {index}",
         )
