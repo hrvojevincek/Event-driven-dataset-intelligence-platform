@@ -3,13 +3,11 @@ from eventforge.events.schemas.constants import (
     DETAIL_TYPE_ANNOTATION_TASK_COMPLETED,
     DETAIL_TYPE_ANNOTATION_TASK_DISPATCHED,
     DETAIL_TYPE_EMBEDDING_COMPLETED,
-    DETAIL_TYPE_INGESTION_COMPLETED,
     DETAIL_TYPE_INTAKE_COMPLETED,
     DETAIL_TYPE_KNOWLEDGE_MINED,
     DETAIL_TYPE_PLANNING_COMPLETED,
     DETAIL_TYPE_PREPROCESSING_COMPLETED,
     DETAIL_TYPE_PROJECT_SUBMITTED,
-    DETAIL_TYPE_QUERY_SUBMITTED,
     DETAIL_TYPE_RESEARCH_TASK_COMPLETED,
     DETAIL_TYPE_RESEARCH_TASK_DISPATCHED,
 )
@@ -21,9 +19,7 @@ DETAIL_TYPE_TO_FAILED_STAGE: dict[str, str] = {
     DETAIL_TYPE_PLANNING_COMPLETED: JobStageName.ANNOTATION.value,
     DETAIL_TYPE_ANNOTATION_TASK_DISPATCHED: JobStageName.ANNOTATION.value,
     DETAIL_TYPE_ANNOTATION_TASK_COMPLETED: JobStageName.EXPORT.value,
-    # Legacy detail types until agents are migrated (Phases 3–7)
-    DETAIL_TYPE_QUERY_SUBMITTED: JobStageName.INTAKE.value,
-    DETAIL_TYPE_INGESTION_COMPLETED: JobStageName.PREPROCESSING.value,
+    # Legacy detail types until remaining research schemas are removed
     DETAIL_TYPE_EMBEDDING_COMPLETED: JobStageName.PLANNING.value,
     DETAIL_TYPE_KNOWLEDGE_MINED: JobStageName.ANNOTATION.value,
     DETAIL_TYPE_RESEARCH_TASK_DISPATCHED: JobStageName.ANNOTATION.value,
@@ -37,9 +33,7 @@ DETAIL_TYPE_TO_SOURCE_QUEUE: dict[str, str] = {
     DETAIL_TYPE_PLANNING_COMPLETED: "eventforge-research",
     DETAIL_TYPE_ANNOTATION_TASK_DISPATCHED: "eventforge-research",
     DETAIL_TYPE_ANNOTATION_TASK_COMPLETED: "eventforge-synthesis",
-    # Legacy detail types until agents are migrated (Phases 3–7)
-    DETAIL_TYPE_QUERY_SUBMITTED: "eventforge-ingestion",
-    DETAIL_TYPE_INGESTION_COMPLETED: "eventforge-embedding",
+    # Legacy detail types until remaining research schemas are removed
     DETAIL_TYPE_EMBEDDING_COMPLETED: "eventforge-knowledge-mining",
     DETAIL_TYPE_KNOWLEDGE_MINED: "eventforge-research",
     DETAIL_TYPE_RESEARCH_TASK_DISPATCHED: "eventforge-research",

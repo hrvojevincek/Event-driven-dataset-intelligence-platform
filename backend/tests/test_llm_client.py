@@ -55,7 +55,7 @@ async def test_llm_usage_repository_log_and_total(db_session: AsyncSession) -> N
     repo = LLMUsageRepository(db_session)
     await repo.log(
         job_id=job.id,
-        agent_name="ingestion",
+        agent_name="intake",
         model="gpt-4o-mini",
         input_tokens=100,
         output_tokens=50,
@@ -63,7 +63,7 @@ async def test_llm_usage_repository_log_and_total(db_session: AsyncSession) -> N
     )
     await repo.log(
         job_id=job.id,
-        agent_name="synthesis",
+        agent_name="export",
         model="gpt-4o-mini",
         input_tokens=200,
         output_tokens=100,
@@ -73,7 +73,7 @@ async def test_llm_usage_repository_log_and_total(db_session: AsyncSession) -> N
 
     records = await repo.list_by_job_id(job.id)
     assert len(records) == 2
-    assert records[0].agent_name == "ingestion"
+    assert records[0].agent_name == "intake"
     assert await repo.total_cost_by_job_id(job.id) == Decimal("0.000135")
 
 

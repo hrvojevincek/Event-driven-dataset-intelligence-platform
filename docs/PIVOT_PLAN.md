@@ -48,14 +48,14 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 | 4     | Preprocessing stage | ✅ Done        |
 | 5     | Planning stage      | ✅ Done        |
 | 6     | Annotation stage    | ✅ Done        |
-| 7     | Export stage        | ⬜ Not started |
+| 7     | Export stage        | ✅ Done        |
 | 8     | Frontend pivot      | ⬜ Not started |
 | 9     | Local infra cleanup | ⬜ Not started |
 | 10    | Polish & portfolio  | ⬜ Not started |
 
 **Legend:** ⬜ Not started · 🟡 In progress · ✅ Done
 
-**Next:** Phase 7 — Export stage
+**Next:** Phase 8 — Frontend pivot
 
 ---
 
@@ -210,10 +210,10 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 **Replaces:** `agents/synthesis.py`
 
-- [ ] `services/export/merge.py` — combine batches → JSONL
-- [ ] `services/export/qc.py` — coverage %, schema compliance, low-confidence flags, cost total
-- [ ] `agents/export.py` + `workers/export.py`
-- [ ] `GET /api/v1/projects/{id}/export` — download JSONL
+- [x] `services/export/merge.py` — combine batches → JSONL
+- [x] `services/export/qc.py` — coverage %, schema compliance, low-confidence flags, cost total
+- [x] `agents/export.py` + `workers/export.py`
+- [x] `GET /api/v1/projects/{id}/export` — download JSONL
 
 **Exit:** Full pipeline → JSONL + QC report. **Full E2E milestone.**
 

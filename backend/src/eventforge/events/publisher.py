@@ -17,7 +17,6 @@ EVENT_SOURCE_ANNOTATION = "eventforge.workers.annotation"
 EVENT_SOURCE_EXPORT = "eventforge.workers.export"
 EVENT_SOURCE_DLQ = "eventforge.workers.dlq"
 # Legacy event sources (same workers until Phases 3–7)
-EVENT_SOURCE_INGESTION = EVENT_SOURCE_INTAKE
 EVENT_SOURCE_EMBEDDING = EVENT_SOURCE_PREPROCESSING
 EVENT_SOURCE_KNOWLEDGE = EVENT_SOURCE_PLANNING
 EVENT_SOURCE_RESEARCH = EVENT_SOURCE_ANNOTATION
@@ -51,10 +50,6 @@ class EventPublisher:
 
     async def publish_project_submitted(self, event: PublishableEvent) -> None:
         await self.publish(event, source=EVENT_SOURCE_API)
-
-    async def publish_query_submitted(self, event: PublishableEvent) -> None:
-        """Legacy alias — use publish_project_submitted after Phase 3."""
-        await self.publish_project_submitted(event)
 
     async def publish(self, event: PublishableEvent, *, source: str) -> None:
         await asyncio.to_thread(self._publish_sync, event, source)

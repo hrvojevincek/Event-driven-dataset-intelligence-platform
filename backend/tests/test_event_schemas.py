@@ -4,7 +4,6 @@ from pathlib import Path
 from uuid import UUID
 
 import pytest
-from pydantic import ValidationError
 
 from eventforge.events.schemas import (
     DETAIL_TYPE_ANNOTATION_TASK_COMPLETED,
@@ -13,23 +12,18 @@ from eventforge.events.schemas import (
     DETAIL_TYPE_PLANNING_COMPLETED,
     DETAIL_TYPE_PREPROCESSING_COMPLETED,
     DETAIL_TYPE_PROJECT_SUBMITTED,
-    DETAIL_TYPE_QUERY_SUBMITTED,
     EXPORT_COMPLETED_SCHEMA_VERSION,
     INTAKE_COMPLETED_SCHEMA_VERSION,
     PLANNING_COMPLETED_SCHEMA_VERSION,
     PREPROCESSING_COMPLETED_SCHEMA_VERSION,
     PROJECT_SUBMITTED_SCHEMA_VERSION,
-    QUERY_SUBMITTED_SCHEMA_VERSION,
     ProjectSubmittedEvent,
-    QueryDepth,
-    QuerySubmittedPayload,
     build_annotation_task_completed_event,
     build_export_completed_event,
     build_intake_completed_event,
     build_planning_completed_event,
     build_preprocessing_completed_event,
     build_project_submitted_event,
-    build_query_submitted_event,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -38,35 +32,6 @@ SHARED_EVENTS = REPO_ROOT / "shared" / "events"
 JOB_ID = UUID("11111111-1111-4111-8111-111111111111")
 EVENT_ID = UUID("22222222-2222-4222-8222-222222222222")
 FIXED_TS = datetime(2026, 6, 21, 12, 0, tzinfo=UTC)
-
-
-def test_query_submitted_payload_requires_topic() -> None:
-    with pytest.raises(ValidationError):
-        QuerySubmittedPayload.model_validate({})
-
-
-def test_query_submitted_payload_rejects_unknown_fields() -> None:
-    with pytest.raises(ValidationError):
-        QuerySubmittedPayload.model_validate({"topic": "AI agents", "extra": True})
-
-
-def test_build_query_submitted_event_sets_envelope_fields() -> None:
-    event = build_query_submitted_event(
-        job_id=JOB_ID,
-        correlation_id="corr-abc",
-        topic="Event-driven architectures",
-        depth=QueryDepth.DEEP,
-        max_sources=10,
-        event_id=EVENT_ID,
-        timestamp=FIXED_TS,
-    )
-
-    assert event.detail_type == DETAIL_TYPE_QUERY_SUBMITTED
-    assert event.schema_version == QUERY_SUBMITTED_SCHEMA_VERSION
-    assert event.job_id == JOB_ID
-    assert event.payload.topic == "Event-driven architectures"
-    assert event.payload.depth == QueryDepth.DEEP
-    assert event.payload.max_sources == 10
 
 
 def test_build_project_submitted_event_sets_envelope_fields() -> None:
@@ -178,19 +143,6 @@ def test_project_submitted_event_serializes_to_json_compatible_dict() -> None:
     assert data["payload"]["domain"] == "documents"
 
 
-def test_query_submitted_event_serializes_to_json_compatible_dict() -> None:
-    event = build_query_submitted_event(
-        job_id=JOB_ID,
-        correlation_id="corr-abc",
-        topic="Test",
-    )
-
-    data = json.loads(event.model_dump_json())
-    assert data["detail_type"] == "eventforge.query.submitted"
-    assert data["payload"]["topic"] == "Test"
-    assert data["payload"]["depth"] == "standard"
-
-
 def test_round_trip_through_pydantic() -> None:
     original = build_project_submitted_event(
         job_id=JOB_ID,
@@ -216,9 +168,7 @@ def test_round_trip_through_pydantic() -> None:
         "annotation.all_completed.schema.json",
         "export.completed.schema.json",
         "pipeline.failed.schema.json",
-        # Legacy schemas kept until Phase 7 cleanup
-        "query.submitted.schema.json",
-        "ingestion.completed.schema.json",
+        # Legacy schemas kept until remaining research cleanup
         "embedding.completed.schema.json",
     ],
 )
