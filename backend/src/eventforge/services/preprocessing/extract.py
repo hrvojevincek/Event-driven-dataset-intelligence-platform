@@ -1,14 +1,33 @@
 """Extract plain text from uploaded assets."""
 
-from io import BytesIO
+from enum import StrEnum
 from pathlib import Path
 
-from pypdf import PdfReader
+import pymupdf
+import pymupdf4llm
 
 from eventforge.db.models import Asset
 from eventforge.services.storage.local import LocalStorage
 
 TEXT_EXTENSIONS = {".txt", ".md"}
+MARKDOWN_MIME_TYPES = {"text/markdown", "text/x-markdown"}
+
+
+class SourceKind(StrEnum):
+    """Segmentation strategy for an extracted document."""
+
+    PLAIN = "plain"
+    MARKDOWN = "markdown"
+
+
+def source_kind_for_asset(asset: Asset) -> SourceKind:
+    """Choose segmentation rules from asset filename and MIME type."""
+    extension = Path(asset.filename).suffix.lower()
+    if asset.mime_type == "application/pdf" or extension == ".pdf":
+        return SourceKind.MARKDOWN
+    if extension == ".md" or asset.mime_type in MARKDOWN_MIME_TYPES:
+        return SourceKind.MARKDOWN
+    return SourceKind.PLAIN
 
 
 def extract_text_from_bytes(content: bytes, *, mime_type: str, filename: str) -> str:
@@ -38,13 +57,13 @@ def _extract_plain_text(content: bytes) -> str:
 
 
 def _extract_pdf(content: bytes) -> str:
-    reader = PdfReader(BytesIO(content))
-    parts: list[str] = []
-    for page in reader.pages:
-        page_text = page.extract_text()
-        if page_text:
-            parts.append(page_text.strip())
-    text = "\n\n".join(parts).strip()
+    """Extract layout-aware Markdown from a PDF via PyMuPDF."""
+    doc = pymupdf.open(stream=content, filetype="pdf")
+    try:
+        markdown = pymupdf4llm.to_markdown(doc)
+    finally:
+        doc.close()
+    text = markdown.strip()
     if not text:
         msg = "PDF contains no extractable text"
         raise ValueError(msg)

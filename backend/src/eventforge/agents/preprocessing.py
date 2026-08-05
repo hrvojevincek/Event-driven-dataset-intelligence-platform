@@ -26,7 +26,7 @@ from eventforge.events.schemas import (
     PreprocessingCompletedEvent,
     build_preprocessing_completed_event,
 )
-from eventforge.services.preprocessing import read_asset_text, segment_text
+from eventforge.services.preprocessing import read_asset_text, segment_text, source_kind_for_asset
 from eventforge.services.storage.local import LocalStorage, get_local_storage
 
 
@@ -47,7 +47,13 @@ async def _load_or_create_segments(
     segments: list[Segment] = []
     for asset in assets:
         text = read_asset_text(asset, storage)
-        for piece in segment_text(text, chunk_size=chunk_size, overlap=overlap):
+        kind = source_kind_for_asset(asset)
+        for piece in segment_text(
+            text,
+            chunk_size=chunk_size,
+            overlap=overlap,
+            source_kind=kind,
+        ):
             segments.append(
                 Segment(
                     job_id=job_id,
