@@ -37,7 +37,7 @@ from eventforge.db.repositories import (
     LLMUsageRepository,
     ProcessedEventRepository,
 )
-from eventforge.events.publisher import PUBLISHER_WORKER_NAME, EventPublisher
+from eventforge.events.publisher import EVENT_SOURCE_API, PUBLISHER_WORKER_NAME, EventPublisher
 from eventforge.events.schemas import build_project_submitted_event
 from eventforge.services.intake import resolve_schema, validate_upload
 from eventforge.services.storage.local import LocalStorage, get_local_storage
@@ -163,7 +163,7 @@ async def submit_project(
             job_id=str(job_id),
             event_id=event_id,
         ):
-            await publisher.publish_project_submitted(event)
+            await publisher.publish(event, source=EVENT_SOURCE_API)
     else:
         logger.info(
             "Skipped publish; project.submitted already claimed",

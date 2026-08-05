@@ -28,7 +28,7 @@ from eventforge.events.schemas import (
     build_project_submitted_event,
 )
 from eventforge.services.storage.local import LocalStorage
-from eventforge.stages.intake import parse_project_submitted_event, process_project_submitted
+from eventforge.stages.intake import parse_project_submitted_event, run_intake
 from eventforge.workers.intake import IntakeWorker
 
 settings = get_settings()
@@ -101,7 +101,7 @@ def test_parse_project_submitted_event_rejects_wrong_type() -> None:
         parse_project_submitted_event({"detail_type": "eventforge.intake.completed"})
 
 
-async def test_process_project_submitted_marks_assets_and_stage(
+async def test_run_intake_marks_assets_and_stage(
     db_session: AsyncSession,
     local_storage: LocalStorage,
 ) -> None:
@@ -117,7 +117,7 @@ async def test_process_project_submitted_marks_assets_and_stage(
         asset_count=len(assets),
     )
 
-    result = await process_project_submitted(
+    result = await run_intake(
         db_session,
         mock_publisher,
         inbound,
@@ -145,7 +145,7 @@ async def test_process_project_submitted_marks_assets_and_stage(
     assert record.worker_name == WORKER_NAME_INTAKE
 
 
-async def test_process_project_submitted_skips_duplicate_event(
+async def test_run_intake_skips_duplicate_event(
     db_session: AsyncSession,
     local_storage: LocalStorage,
 ) -> None:
@@ -159,7 +159,7 @@ async def test_process_project_submitted_skips_duplicate_event(
         asset_count=1,
     )
 
-    await process_project_submitted(
+    await run_intake(
         db_session,
         mock_publisher,
         inbound,
@@ -167,7 +167,7 @@ async def test_process_project_submitted_skips_duplicate_event(
     )
     mock_publisher.reset_mock()
 
-    duplicate = await process_project_submitted(
+    duplicate = await run_intake(
         db_session,
         mock_publisher,
         inbound,
@@ -198,7 +198,7 @@ async def test_intake_worker_deletes_message_on_success() -> None:
         "Messages": [{"ReceiptHandle": "rh-1", "Body": body, "MessageId": "m-1"}]
     }
     worker._client = mock_client
-    worker._queue_url = "http://localstack/000000000000/eventforge-ingestion"
+    worker._queue_url = "http://localstack/000000000000/eventforge-intake"
 
     with patch.object(worker, "handle_message", new=AsyncMock()):
         handled = await worker.poll_once()

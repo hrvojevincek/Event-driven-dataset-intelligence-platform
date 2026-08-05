@@ -17,11 +17,11 @@ REGION="${AWS_REGION:-us-east-1}"
 PREFIX="${SQS_QUEUE_PREFIX:-eventforge}"
 QUEUES=(
   "${PREFIX}-dlq"
-  "${PREFIX}-ingestion"
-  "${PREFIX}-embedding"
-  "${PREFIX}-knowledge-mining"
-  "${PREFIX}-research"
-  "${PREFIX}-synthesis"
+  "${PREFIX}-intake"
+  "${PREFIX}-preprocessing"
+  "${PREFIX}-planning"
+  "${PREFIX}-annotation"
+  "${PREFIX}-export"
 )
 
 echo "Waiting for LocalStack at ${ENDPOINT}..."

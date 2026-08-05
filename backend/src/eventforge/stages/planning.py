@@ -55,7 +55,7 @@ async def _load_or_create_tasks(
 
 
 @traced_stage(WORKER_NAME_PLANNING)
-async def process_preprocessing_completed(
+async def run_planning(
     session: AsyncSession,
     publisher: EventPublisher,
     event: PreprocessingCompletedEvent,
@@ -75,16 +75,16 @@ async def process_preprocessing_completed(
     await run.mark_running(planning_stage)
     tasks = await _load_or_create_tasks(
         session,
-        run.project.id,
+        run.job.id,
         event.payload.segment_ids,
         segments_per_task=settings.planning_segments_per_task,
     )
 
     completed_event = build_planning_completed_event(
-        job_id=run.project.id,
+        job_id=run.job.id,
         correlation_id=event.correlation_id,
         task_ids=[task.id for task in tasks],
-        event_id=deterministic_event_id(run.project.id, DETAIL_TYPE_PLANNING_COMPLETED),
+        event_id=deterministic_event_id(run.job.id, DETAIL_TYPE_PLANNING_COMPLETED),
     )
 
     await run.complete_stage(planning_stage)

@@ -38,7 +38,7 @@ async def _finalize_assets(
 
 
 @traced_stage(WORKER_NAME_INTAKE)
-async def process_project_submitted(
+async def run_intake(
     session: AsyncSession,
     publisher: EventPublisher,
     event: ProjectSubmittedEvent,
@@ -51,7 +51,6 @@ async def process_project_submitted(
         publisher,
         event,
         worker_name=WORKER_NAME_INTAKE,
-        project_label="job",
     )
     if run is None:
         return None
@@ -59,22 +58,22 @@ async def process_project_submitted(
     store = storage or get_local_storage()
     intake_stage = await run.require_stage(JobStageName.INTAKE)
 
-    run.project.status = JobStatus.RUNNING.value
+    run.job.status = JobStatus.RUNNING.value
     if intake_stage.status != StageStatus.COMPLETED.value:
         await run.mark_running(intake_stage)
 
-    assets = await AssetRepository(session).list_by_job_id(run.project.id)
+    assets = await AssetRepository(session).list_by_job_id(run.job.id)
     if not assets:
-        msg = f"No assets registered for job: {run.project.id}"
+        msg = f"No assets registered for job: {run.job.id}"
         raise ValueError(msg)
 
     ready_assets = await _finalize_assets(session, assets, store)
 
     completed_event = build_intake_completed_event(
-        job_id=run.project.id,
+        job_id=run.job.id,
         correlation_id=event.correlation_id,
         asset_ids=[asset.id for asset in ready_assets],
-        event_id=deterministic_event_id(run.project.id, DETAIL_TYPE_INTAKE_COMPLETED),
+        event_id=deterministic_event_id(run.job.id, DETAIL_TYPE_INTAKE_COMPLETED),
     )
 
     await run.complete_stage(intake_stage)

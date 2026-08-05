@@ -2,9 +2,7 @@ import logging
 from typing import Any
 
 from eventforge.core.config import get_settings
-from eventforge.db.session import get_session_factory
 from eventforge.events.parser import parse_annotation_queue_message
-from eventforge.events.publisher import EventPublisher
 from eventforge.events.schemas.constants import (
     DETAIL_TYPE_ANNOTATION_TASK_DISPATCHED,
     DETAIL_TYPE_PLANNING_COMPLETED,
@@ -12,24 +10,22 @@ from eventforge.events.schemas.constants import (
 from eventforge.stages.annotation import (
     parse_annotation_task_dispatched_event,
     parse_planning_completed_event,
-    process_annotation_task_dispatched,
-    process_planning_completed,
+    run_annotation_fanout,
+    run_annotation_task,
 )
-from eventforge.workers.base import SqsConsumer
 from eventforge.workers.bootstrap import main
 from eventforge.workers.cost_cap import run_with_cost_cap_handling
+from eventforge.workers.stage_worker import StageWorker
 
 logger = logging.getLogger(__name__)
 
 
-class AnnotationWorker(SqsConsumer):
+class AnnotationWorker(StageWorker):
     """Consumes planning.completed and annotation.task.dispatched events."""
 
     def __init__(self) -> None:
         settings = get_settings()
-        super().__init__(settings.research_queue_name, settings)
-        self._publisher = EventPublisher(settings)
-        self._session_factory = get_session_factory(settings)
+        super().__init__(settings.annotation_queue_name, settings)
 
     async def handle_message(self, message: dict[str, Any]) -> None:
         detail, task_token = parse_annotation_queue_message(message["Body"])
@@ -60,7 +56,7 @@ class AnnotationWorker(SqsConsumer):
 
         async def _process():
             async with self._session_factory() as session:
-                return await process_planning_completed(session, self._publisher, event)
+                return await run_annotation_fanout(session, self._publisher, event)
 
         result = await run_with_cost_cap_handling(
             self._session_factory,
@@ -97,7 +93,7 @@ class AnnotationWorker(SqsConsumer):
 
         async def _process():
             async with self._session_factory() as session:
-                return await process_annotation_task_dispatched(
+                return await run_annotation_task(
                     session,
                     self._publisher,
                     event,

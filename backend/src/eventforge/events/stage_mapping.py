@@ -26,18 +26,18 @@ DETAIL_TYPE_TO_FAILED_STAGE: dict[str, str] = {
     DETAIL_TYPE_RESEARCH_TASK_COMPLETED: JobStageName.EXPORT.value,
 }
 
-DETAIL_TYPE_TO_SOURCE_QUEUE: dict[str, str] = {
-    DETAIL_TYPE_PROJECT_SUBMITTED: "eventforge-ingestion",
-    DETAIL_TYPE_INTAKE_COMPLETED: "eventforge-embedding",
-    DETAIL_TYPE_PREPROCESSING_COMPLETED: "eventforge-knowledge-mining",
-    DETAIL_TYPE_PLANNING_COMPLETED: "eventforge-research",
-    DETAIL_TYPE_ANNOTATION_TASK_DISPATCHED: "eventforge-research",
-    DETAIL_TYPE_ANNOTATION_TASK_COMPLETED: "eventforge-synthesis",
+DETAIL_TYPE_TO_QUEUE_SUFFIX: dict[str, str] = {
+    DETAIL_TYPE_PROJECT_SUBMITTED: "intake",
+    DETAIL_TYPE_INTAKE_COMPLETED: "preprocessing",
+    DETAIL_TYPE_PREPROCESSING_COMPLETED: "planning",
+    DETAIL_TYPE_PLANNING_COMPLETED: "annotation",
+    DETAIL_TYPE_ANNOTATION_TASK_DISPATCHED: "annotation",
+    DETAIL_TYPE_ANNOTATION_TASK_COMPLETED: "export",
     # Legacy detail types until remaining research schemas are removed
-    DETAIL_TYPE_EMBEDDING_COMPLETED: "eventforge-knowledge-mining",
-    DETAIL_TYPE_KNOWLEDGE_MINED: "eventforge-research",
-    DETAIL_TYPE_RESEARCH_TASK_DISPATCHED: "eventforge-research",
-    DETAIL_TYPE_RESEARCH_TASK_COMPLETED: "eventforge-synthesis",
+    DETAIL_TYPE_EMBEDDING_COMPLETED: "planning",
+    DETAIL_TYPE_KNOWLEDGE_MINED: "annotation",
+    DETAIL_TYPE_RESEARCH_TASK_DISPATCHED: "annotation",
+    DETAIL_TYPE_RESEARCH_TASK_COMPLETED: "export",
 }
 
 
@@ -48,4 +48,9 @@ def stage_for_failed_detail_type(detail_type: str) -> str | None:
 
 def source_queue_for_detail_type(detail_type: str) -> str | None:
     """Infer the worker queue an inbound event was consumed from."""
-    return DETAIL_TYPE_TO_SOURCE_QUEUE.get(detail_type)
+    suffix = DETAIL_TYPE_TO_QUEUE_SUFFIX.get(detail_type)
+    if suffix is None:
+        return None
+    from eventforge.core.config import get_settings
+
+    return f"{get_settings().sqs_queue_prefix}-{suffix}"

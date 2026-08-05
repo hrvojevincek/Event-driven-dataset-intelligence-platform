@@ -7,7 +7,7 @@ REGION="${AWS_REGION:-eu-west-2}"
 PREFIX="${SQS_QUEUE_PREFIX:-eventforge}"
 MAX_RECEIVE_COUNT="${SQS_MAX_RECEIVE_COUNT:-3}"
 
-WORKER_QUEUES=(ingestion embedding knowledge-mining research synthesis)
+WORKER_QUEUES=(intake preprocessing planning annotation export)
 
 aws_cmd() {
   aws --endpoint-url="${ENDPOINT}" --region="${REGION}" "$@"

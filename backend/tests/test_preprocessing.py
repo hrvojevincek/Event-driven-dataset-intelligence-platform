@@ -29,7 +29,7 @@ from eventforge.events.schemas import (
     build_preprocessing_completed_event,
 )
 from eventforge.services.storage.local import LocalStorage
-from eventforge.stages.preprocessing import parse_intake_completed_event, process_intake_completed
+from eventforge.stages.preprocessing import parse_intake_completed_event, run_preprocessing
 from eventforge.workers.preprocessing import PreprocessingWorker
 
 settings = get_settings()
@@ -103,7 +103,7 @@ def test_parse_intake_completed_event_rejects_wrong_type() -> None:
         parse_intake_completed_event({"detail_type": "eventforge.project.submitted"})
 
 
-async def test_process_intake_completed_writes_segments_and_updates_stage(
+async def test_run_preprocessing_writes_segments_and_updates_stage(
     db_session: AsyncSession,
     local_storage: LocalStorage,
 ) -> None:
@@ -116,7 +116,7 @@ async def test_process_intake_completed_writes_segments_and_updates_stage(
         asset_ids=[asset.id for asset in assets],
     )
 
-    result = await process_intake_completed(
+    result = await run_preprocessing(
         db_session,
         mock_publisher,
         inbound,
@@ -143,7 +143,7 @@ async def test_process_intake_completed_writes_segments_and_updates_stage(
     assert record.worker_name == WORKER_NAME_PREPROCESSING
 
 
-async def test_process_intake_completed_skips_duplicate_event(
+async def test_run_preprocessing_skips_duplicate_event(
     db_session: AsyncSession,
     local_storage: LocalStorage,
 ) -> None:
@@ -155,7 +155,7 @@ async def test_process_intake_completed_skips_duplicate_event(
         asset_ids=[asset.id for asset in assets],
     )
 
-    await process_intake_completed(
+    await run_preprocessing(
         db_session,
         mock_publisher,
         inbound,
@@ -163,7 +163,7 @@ async def test_process_intake_completed_skips_duplicate_event(
     )
     mock_publisher.reset_mock()
 
-    duplicate_result = await process_intake_completed(
+    duplicate_result = await run_preprocessing(
         db_session,
         mock_publisher,
         inbound,
@@ -193,7 +193,7 @@ async def test_preprocessing_worker_deletes_message_on_success() -> None:
         "Messages": [{"ReceiptHandle": "rh-1", "Body": body, "MessageId": "m-1"}]
     }
     worker._client = mock_client
-    worker._queue_url = "http://localstack/000000000000/eventforge-embedding"
+    worker._queue_url = "http://localstack/000000000000/eventforge-preprocessing"
 
     with patch.object(worker, "handle_message", new=AsyncMock()):
         handled = await worker.poll_once()

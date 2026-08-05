@@ -101,7 +101,7 @@ async def test_process_pipeline_failure_marks_job_and_stage_failed(
         publisher,
         failed_event=parse_failed_event_detail(json.loads(failed_event.model_dump_json())),
         error_message="Worker crashed",
-        source_queue="eventforge-ingestion",
+        source_queue="eventforge-intake",
         receive_count=3,
     )
 
@@ -110,7 +110,7 @@ async def test_process_pipeline_failure_marks_job_and_stage_failed(
     assert result.payload.stage == JobStageName.INTAKE.value
     assert result.payload.failed_event_id == failed_event.event_id
     assert result.payload.error_message == "Worker crashed"
-    assert result.payload.source_queue == "eventforge-ingestion"
+    assert result.payload.source_queue == "eventforge-intake"
     assert result.payload.receive_count == 3
     assert result.event_id == deterministic_pipeline_failed_event_id(job.id, failed_event.event_id)
 

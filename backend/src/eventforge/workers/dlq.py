@@ -2,24 +2,20 @@ import logging
 from typing import Any
 
 from eventforge.core.config import get_settings
-from eventforge.db.session import get_session_factory
 from eventforge.events.parser import parse_eventbridge_sqs_body
-from eventforge.events.publisher import EventPublisher
 from eventforge.services.pipeline_failure import parse_failed_event_detail, process_pipeline_failure
-from eventforge.workers.base import SqsConsumer
 from eventforge.workers.bootstrap import main
+from eventforge.workers.stage_worker import StageWorker
 
 logger = logging.getLogger(__name__)
 
 
-class DlqWorker(SqsConsumer):
+class DlqWorker(StageWorker):
     """Consumes poison messages from the DLQ and emits pipeline.failed events."""
 
     def __init__(self) -> None:
         settings = get_settings()
         super().__init__(settings.dlq_queue_name, settings)
-        self._publisher = EventPublisher(settings)
-        self._session_factory = get_session_factory(settings)
 
     async def handle_message(self, message: dict[str, Any]) -> None:
         try:

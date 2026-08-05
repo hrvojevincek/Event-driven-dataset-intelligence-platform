@@ -81,7 +81,7 @@ async def _load_or_create_export(
 
 
 @traced_stage(WORKER_NAME_EXPORT)
-async def process_annotation_all_completed(
+async def run_export(
     session: AsyncSession,
     publisher: EventPublisher,
     event: AnnotationAllCompletedEvent,
@@ -96,7 +96,7 @@ async def process_annotation_all_completed(
     if run is None:
         return None
 
-    batch_count = await AnnotationBatchRepository(session).count_by_job_id(run.project.id)
+    batch_count = await AnnotationBatchRepository(session).count_by_job_id(run.job.id)
     if batch_count < event.payload.task_count:
         await run.defer()
         return None
@@ -105,20 +105,20 @@ async def process_annotation_all_completed(
     await run.mark_running(export_stage)
     export, batch_count, segment_count = await _load_or_create_export(
         session,
-        run.project.id,
+        run.job.id,
         expected_task_count=event.payload.task_count,
     )
 
     completed_event = build_export_completed_event(
-        job_id=run.project.id,
+        job_id=run.job.id,
         correlation_id=event.correlation_id,
         export_id=export.id,
         batch_count=batch_count,
         segment_count=segment_count or None,
-        event_id=deterministic_event_id(run.project.id, DETAIL_TYPE_EXPORT_COMPLETED),
+        event_id=deterministic_event_id(run.job.id, DETAIL_TYPE_EXPORT_COMPLETED),
     )
 
-    run.project.status = JobStatus.COMPLETED.value
+    run.job.status = JobStatus.COMPLETED.value
     await run.complete_stage(export_stage)
     await run.publish(completed_event, source=EVENT_SOURCE_EXPORT)
     return completed_event

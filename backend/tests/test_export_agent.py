@@ -27,7 +27,7 @@ from eventforge.events.schemas import (
     build_annotation_all_completed_event,
 )
 from eventforge.services.intake.templates import SUPPORT_CALL_TEMPLATE
-from eventforge.stages.export import process_annotation_all_completed
+from eventforge.stages.export import run_export
 from eventforge.workers.export import ExportWorker
 
 
@@ -127,7 +127,7 @@ async def _seed_export_project(
 
 
 @pytest.mark.asyncio
-async def test_process_annotation_all_completed_persists_export(
+async def test_run_export_persists_export(
     db_session: AsyncSession,
 ) -> None:
     job, export_stage, _task, segment = await _seed_export_project(db_session)
@@ -138,7 +138,7 @@ async def test_process_annotation_all_completed_persists_export(
         task_count=1,
     )
 
-    result = await process_annotation_all_completed(db_session, publisher, event)
+    result = await run_export(db_session, publisher, event)
 
     assert result is not None
     assert result.payload.batch_count == 1
@@ -161,7 +161,7 @@ async def test_process_annotation_all_completed_persists_export(
 
 
 @pytest.mark.asyncio
-async def test_process_annotation_all_completed_is_idempotent(
+async def test_run_export_is_idempotent(
     db_session: AsyncSession,
 ) -> None:
     job, _, _, _ = await _seed_export_project(db_session)
@@ -172,8 +172,8 @@ async def test_process_annotation_all_completed_is_idempotent(
         task_count=1,
     )
 
-    first = await process_annotation_all_completed(db_session, publisher, event)
-    second = await process_annotation_all_completed(db_session, publisher, event)
+    first = await run_export(db_session, publisher, event)
+    second = await run_export(db_session, publisher, event)
 
     assert first is not None
     assert second is None
