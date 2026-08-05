@@ -3,26 +3,8 @@ import json
 import re
 
 from eventforge.events.schemas.constants import EMBEDDING_DIMENSION
-from eventforge.services.search.types import WebSearchResult
 
 MOCK_MODEL = "mock-local"
-
-
-def mock_search_results(query: str, *, max_results: int) -> list[WebSearchResult]:
-    """Fixture Tavily-style web search hits for local development."""
-    count = max(1, min(max_results, 10))
-    topic = query.strip()[:80] or "research topic"
-    return [
-        WebSearchResult(
-            url=f"https://mock.local/sources/{index}",
-            title=f"Mock source {index}: {topic}",
-            snippet=(
-                f"Fixture excerpt about {topic}. "
-                f"This is mock ingestion content for local pipeline testing (source {index})."
-            ),
-        )
-        for index in range(1, count + 1)
-    ]
 
 
 def deterministic_embedding(text: str, *, dimension: int = EMBEDDING_DIMENSION) -> list[float]:

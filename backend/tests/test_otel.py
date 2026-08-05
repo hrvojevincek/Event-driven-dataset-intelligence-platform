@@ -30,7 +30,7 @@ def test_setup_otel_skips_when_disabled() -> None:
 
 def test_agent_span_sets_pipeline_attributes(span_exporter: InMemorySpanExporter) -> None:
     with agent_span(
-        "ingestion",
+        "intake",
         "process",
         correlation_id="corr-1",
         job_id="job-1",
@@ -40,7 +40,7 @@ def test_agent_span_sets_pipeline_attributes(span_exporter: InMemorySpanExporter
 
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
-    assert spans[0].name == "agent.ingestion.process"
+    assert spans[0].name == "agent.intake.process"
     assert spans[0].attributes[ATTR_CORRELATION_ID] == "corr-1"
     assert spans[0].attributes[ATTR_JOB_ID] == "job-1"
     assert spans[0].attributes["model"] == "gpt-4o-mini"

@@ -10,10 +10,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from eventforge.api.schemas.queries import JobStageResponse
-from eventforge.db.models import Job, JobStatus
+from eventforge.api.schemas.stages import JobStageResponse
+from eventforge.db.models import PIPELINE_STAGE_NAMES, Job, JobStatus
 from eventforge.db.session import get_session_factory
-from eventforge.services.query import _STAGE_ORDER
+
+_STAGE_ORDER = {stage.value: index for index, stage in enumerate(PIPELINE_STAGE_NAMES)}
 
 StreamEventType = Literal["snapshot", "stage_update", "job_complete"]
 
@@ -21,7 +22,7 @@ SSE_KEEPALIVE_SECONDS = 15.0
 
 
 class JobStreamEvent(BaseModel):
-    """Payload emitted on the query SSE stream."""
+    """Payload emitted on the project SSE stream."""
 
     event: StreamEventType
     job_id: UUID

@@ -147,7 +147,7 @@ class Settings(BaseSettings):
         return self.environment == "local"
 
     @property
-    def ingestion_queue_name(self) -> str:
+    def intake_queue_name(self) -> str:
         return f"{self.sqs_queue_prefix}-ingestion"
 
     @property

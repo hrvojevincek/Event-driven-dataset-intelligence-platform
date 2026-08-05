@@ -27,18 +27,18 @@ async def _assert_job_access(
             status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
 
-@router.get("/queries/{job_id}/stream")
-async def stream_query_events(
-    job_id: UUID,
+@router.get("/projects/{project_id}/stream")
+async def stream_project_events(
+    project_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """Stream pipeline stage updates for a job via Server-Sent Events."""
-    await _assert_job_access(db, job_id, current_user)
+    await _assert_job_access(db, project_id, current_user)
     user_id = current_user.id
 
     async def event_generator():
-        async for event in iter_job_stream_events(job_id, user_id):
+        async for event in iter_job_stream_events(project_id, user_id):
             if event is None:
                 yield format_sse_keepalive()
             else:

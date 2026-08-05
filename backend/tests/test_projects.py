@@ -8,8 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from eventforge.api.deps import get_db
-from eventforge.api.routes.queries import get_publisher
+from eventforge.api.deps import get_db, get_publisher
 from eventforge.core.config import Settings
 from eventforge.db.models import PIPELINE_STAGE_NAMES, Asset, Job, JobStage
 from eventforge.db.repositories import ProcessedEventRepository
@@ -142,3 +141,55 @@ async def test_create_project_publisher_claim_record(
     record = await repo.get_by_event_id(str(published.event_id))
     assert record is not None
     assert record.worker_name == "api"
+
+
+async def test_download_project_export_returns_jsonl(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    from eventforge.db.models import DatasetExport, JobStatus
+    from eventforge.db.repositories import UserRepository
+
+    user = await UserRepository(db_session).get_or_create_mock_user()
+
+    job = Job(
+        user_id=user.id,
+        correlation_id="corr-export-download",
+        name="Export download",
+        schema_template="support_call",
+        schema_json='{"type":"object","properties":{}}',
+        status=JobStatus.COMPLETED.value,
+    )
+    db_session.add(job)
+    await db_session.flush()
+
+    export_line = json.dumps(
+        {
+            "segment_id": str(uuid.uuid4()),
+            "content": "hello",
+            "labels": {"topic": "billing"},
+            "provenance": {"asset_filename": "call.txt"},
+        }
+    )
+    db_session.add(
+        DatasetExport(
+            job_id=job.id,
+            export_content=f"{export_line}\n",
+            qc_report_json=json.dumps({"coverage_pct": 100.0}),
+        )
+    )
+    await db_session.flush()
+
+    response = await client.get(f"/api/v1/projects/{job.id}/export")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/x-ndjson")
+    assert "hello" in response.text
+
+    qc_response = await client.get(f"/api/v1/projects/{job.id}/export?format=qc")
+    assert qc_response.status_code == 200
+    assert qc_response.json()["coverage_pct"] == 100.0
+
+
+async def test_download_project_export_not_found(client: AsyncClient) -> None:
+    response = await client.get(f"/api/v1/projects/{uuid.uuid4()}/export")
+    assert response.status_code == 404

@@ -1,13 +1,15 @@
 import json
+import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from eventforge.api.deps import get_current_user, get_db, get_settings
-from eventforge.api.routes.queries import get_publisher
+from eventforge.api.deps import get_current_user, get_db, get_publisher, get_settings
 from eventforge.api.schemas.projects import SubmitProjectResponse
 from eventforge.core.config import Settings
 from eventforge.db.models import User
+from eventforge.db.repositories import DatasetExportRepository, ProjectRepository
 from eventforge.events.publisher import EventPublisher, EventPublishError
 from eventforge.services.project import UploadPayload, submit_project
 
@@ -87,4 +89,43 @@ async def create_project(
         job_id=result.job_id,
         correlation_id=result.correlation_id,
         asset_count=result.asset_count,
+    )
+
+
+@router.get("/projects/{project_id}/export")
+async def download_project_export(
+    project_id: uuid.UUID,
+    format: str = "jsonl",
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    project = await ProjectRepository(db).get_by_id(project_id)
+    if project is None or project.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": "Project not found"},
+        )
+
+    export = await DatasetExportRepository(db).get_by_job_id(project_id)
+    if export is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": "Export not ready"},
+        )
+
+    if format == "qc":
+        return JSONResponse(content=json.loads(export.qc_report_json))
+
+    if format != "jsonl":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"message": "format must be 'jsonl' or 'qc'"},
+        )
+
+    return Response(
+        content=export.export_content,
+        media_type="application/x-ndjson",
+        headers={
+            "Content-Disposition": f'attachment; filename="project-{project_id}.jsonl"',
+        },
     )

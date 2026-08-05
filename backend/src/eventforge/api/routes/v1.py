@@ -1,11 +1,10 @@
 from fastapi import APIRouter
 
-from eventforge.api.routes import projects, queries, stream
+from eventforge.api.routes import projects, stream
 
 router = APIRouter()
 
 router.include_router(projects.router)
-router.include_router(queries.router)
 router.include_router(stream.router)
 
 

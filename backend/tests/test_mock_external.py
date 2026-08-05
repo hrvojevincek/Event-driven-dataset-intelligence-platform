@@ -9,7 +9,6 @@ from eventforge.events.schemas.constants import (
     EMBEDDING_DIMENSION,
     WORKER_NAME_KNOWLEDGE,
     WORKER_NAME_RESEARCH,
-    WORKER_NAME_SYNTHESIS,
 )
 from eventforge.services.legacy.embedding import get_embedding_client
 from eventforge.services.llm.client import get_llm_client
@@ -19,7 +18,6 @@ from eventforge.services.mock.fixtures import (
     mock_entity_extraction_json,
     mock_sub_queries_json,
 )
-from eventforge.services.search.tavily import get_tavily_client
 
 
 def test_use_mock_external_apis_defaults_true_in_local() -> None:
@@ -40,18 +38,6 @@ def test_use_mock_external_apis_explicit_override() -> None:
 def test_mock_external_apis_empty_env_treated_as_auto() -> None:
     settings = Settings(environment="local", mock_external_apis="")
     assert settings.use_mock_external_apis is True
-
-
-@pytest.mark.asyncio
-async def test_mock_tavily_returns_fixture_results() -> None:
-    settings = Settings(environment="local", mock_external_apis=True)
-    with patch("eventforge.services.search.tavily.get_settings", return_value=settings):
-        client = get_tavily_client(settings)
-
-    results = await client.search("event-driven systems", max_results=3)
-
-    assert len(results) == 3
-    assert results[0].url.startswith("https://mock.local/")
 
 
 @pytest.mark.asyncio
@@ -127,25 +113,6 @@ async def test_mock_llm_research_sub_queries_returns_json_array() -> None:
     queries = json.loads(result.content)
     assert len(queries) == 2
     assert queries == json.loads(mock_sub_queries_json(user_prompt))
-
-
-@pytest.mark.asyncio
-async def test_mock_llm_synthesis_returns_markdown_report() -> None:
-    settings = Settings(environment="local", mock_external_apis=True)
-    with patch("eventforge.services.llm.client.get_settings", return_value=settings):
-        client = get_llm_client()
-
-    result = await client.complete(
-        [
-            LLMMessage(role="system", content="synthesis editor"),
-            LLMMessage(role="user", content="Research topic: Local mock mode"),
-        ],
-        job_id=uuid.uuid4(),
-        agent_name=WORKER_NAME_SYNTHESIS,
-    )
-
-    assert "# Executive summary" in result.content
-    assert "MOCK_EXTERNAL_APIS" in result.content
 
 
 def test_mock_entity_extraction_json_is_valid() -> None:

@@ -62,13 +62,13 @@ async def test_processed_event_repository(db_session: AsyncSession) -> None:
 
     assert await repo.exists("evt-001") is False
 
-    db_session.add(ProcessedEvent(event_id="evt-001", worker_name="ingestion"))
+    db_session.add(ProcessedEvent(event_id="evt-001", worker_name="intake"))
     await db_session.flush()
 
     assert await repo.exists("evt-001") is True
     event = await repo.get_by_event_id("evt-001")
     assert event is not None
-    assert event.worker_name == "ingestion"
+    assert event.worker_name == "intake"
 
 
 @pytest.mark.asyncio

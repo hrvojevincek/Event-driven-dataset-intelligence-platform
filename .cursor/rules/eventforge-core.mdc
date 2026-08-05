@@ -75,5 +75,5 @@ Phase 1+: `uv run uvicorn eventforge.main:app --reload` (backend), `npm run dev`
 - **Project:** [EventForge](https://linear.app/kreativbiro/project/eventforge-f35070f0931e) on team `Kreativbiro`
 - **Active work:** Linear MCP (`list_issues`, `get_issue`) — not just markdown
 - **Mirror:** `docs/TASKS.md` + `docs/LINEAR.md` issue index
-- **Next pivot work:** Phase 7 — export stage (see `docs/PIVOT_PLAN.md`)
+- **Next pivot work:** Phase 8 — frontend pivot (see `docs/PIVOT_PLAN.md`)
 - **No AWS deploy** for pivot — LocalStack only (ADR-015)

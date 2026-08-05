@@ -15,7 +15,7 @@ from eventforge.events.parser import parse_eventbridge_sqs_body
 from eventforge.events.publisher import EventPublisher, EventPublishError
 from eventforge.events.schemas import (
     DETAIL_TYPE_PIPELINE_FAILED,
-    build_query_submitted_event,
+    build_project_submitted_event,
 )
 from eventforge.events.stage_mapping import stage_for_failed_detail_type
 from eventforge.services.pipeline_failure import (
@@ -50,8 +50,8 @@ async def _seed_job_with_stages(db_session: AsyncSession) -> Job:
     job = Job(
         user_id=user.id,
         correlation_id=f"corr-fail-{suffix}",
-        topic="Pipeline failure test",
-        depth="standard",
+        name="Pipeline failure test",
+        schema_json="{}",
         status=JobStatus.PENDING.value,
     )
     db_session.add(job)
@@ -69,30 +69,32 @@ async def _seed_job_with_stages(db_session: AsyncSession) -> Job:
     return job
 
 
-def test_stage_for_failed_detail_type_maps_query_submitted_to_ingestion() -> None:
+def test_stage_for_failed_detail_type_maps_project_submitted_to_intake() -> None:
     assert stage_for_failed_detail_type(
-        "eventforge.query.submitted") == JobStageName.INGESTION.value
+        "eventforge.project.submitted") == JobStageName.INTAKE.value
 
 
 def test_parse_failed_event_detail_validates_envelope() -> None:
-    event = build_query_submitted_event(
+    event = build_project_submitted_event(
         job_id=UUID("11111111-1111-4111-8111-111111111111"),
         correlation_id="corr-abc",
-        topic="Failure parse test",
+        name="Failure parse test",
+        schema_json={"type": "object", "properties": {}},
     )
     detail = json.loads(event.model_dump_json())
     parsed = parse_failed_event_detail(detail)
     assert parsed.event_id == event.event_id
-    assert parsed.detail_type == "eventforge.query.submitted"
+    assert parsed.detail_type == "eventforge.project.submitted"
 
 
 async def test_process_pipeline_failure_marks_job_and_stage_failed(
         db_session: AsyncSession) -> None:
     job = await _seed_job_with_stages(db_session)
-    failed_event = build_query_submitted_event(
+    failed_event = build_project_submitted_event(
         job_id=job.id,
         correlation_id=job.correlation_id,
-        topic=job.topic,
+        name=job.name,
+        schema_json={"type": "object", "properties": {}},
     )
     publisher = AsyncMock(spec=EventPublisher)
 
@@ -107,7 +109,7 @@ async def test_process_pipeline_failure_marks_job_and_stage_failed(
 
     assert result is not None
     assert result.detail_type == DETAIL_TYPE_PIPELINE_FAILED
-    assert result.payload.stage == JobStageName.INGESTION.value
+    assert result.payload.stage == JobStageName.INTAKE.value
     assert result.payload.failed_event_id == failed_event.event_id
     assert result.payload.error_message == "Worker crashed"
     assert result.payload.source_queue == "eventforge-ingestion"
@@ -117,11 +119,11 @@ async def test_process_pipeline_failure_marks_job_and_stage_failed(
 
     await db_session.refresh(job)
     stage_repo = JobStageRepository(db_session)
-    ingestion_stage = await stage_repo.get_by_job_and_stage(job.id, JobStageName.INGESTION.value)
-    assert ingestion_stage is not None
+    intake_stage = await stage_repo.get_by_job_and_stage(job.id, JobStageName.INTAKE.value)
+    assert intake_stage is not None
     assert job.status == JobStatus.FAILED.value
-    assert ingestion_stage.status == StageStatus.FAILED.value
-    assert ingestion_stage.error_detail == "Worker crashed"
+    assert intake_stage.status == StageStatus.FAILED.value
+    assert intake_stage.error_detail == "Worker crashed"
     publisher.publish.assert_awaited_once()
 
 
@@ -130,10 +132,11 @@ async def test_process_pipeline_failure_is_idempotent(
     job = await _seed_job_with_stages(db_session)
     failed_event = parse_failed_event_detail(
         json.loads(
-            build_query_submitted_event(
+            build_project_submitted_event(
                 job_id=job.id,
                 correlation_id=job.correlation_id,
-                topic=job.topic,
+                name=job.name,
+                schema_json={"type": "object", "properties": {}},
             ).model_dump_json()
         )
     )
@@ -154,17 +157,18 @@ async def test_process_pipeline_failure_still_publishes_when_job_already_failed(
     job = await _seed_job_with_stages(db_session)
     job.status = JobStatus.FAILED.value
     stage_repo = JobStageRepository(db_session)
-    ingestion_stage = await stage_repo.get_by_job_and_stage(job.id, JobStageName.INGESTION.value)
-    assert ingestion_stage is not None
-    await stage_repo.mark_failed(ingestion_stage, "Prior failure")
+    intake_stage = await stage_repo.get_by_job_and_stage(job.id, JobStageName.INTAKE.value)
+    assert intake_stage is not None
+    await stage_repo.mark_failed(intake_stage, "Prior failure")
     await db_session.flush()
 
     failed_event = parse_failed_event_detail(
         json.loads(
-            build_query_submitted_event(
+            build_project_submitted_event(
                 job_id=job.id,
                 correlation_id=job.correlation_id,
-                topic=job.topic,
+                name=job.name,
+                schema_json={"type": "object", "properties": {}},
             ).model_dump_json()
         )
     )
@@ -182,10 +186,11 @@ async def test_process_pipeline_failure_retries_publish_after_release_claim(
     job = await _seed_job_with_stages(db_session)
     failed_event = parse_failed_event_detail(
         json.loads(
-            build_query_submitted_event(
+            build_project_submitted_event(
                 job_id=job.id,
                 correlation_id=job.correlation_id,
-                topic=job.topic,
+                name=job.name,
+                schema_json={"type": "object", "properties": {}},
             ).model_dump_json()
         )
     )
@@ -205,15 +210,16 @@ async def test_process_pipeline_failure_retries_publish_after_release_claim(
 
 async def test_dlq_worker_deletes_message_on_success() -> None:
     job_id = UUID("11111111-1111-4111-8111-111111111111")
-    event = build_query_submitted_event(
+    event = build_project_submitted_event(
         job_id=job_id,
         correlation_id="corr-dlq",
-        topic="DLQ worker test",
+        name="DLQ worker test",
+        schema_json={"type": "object", "properties": {}},
     )
     body = json.dumps(
         {
             "version": "0",
-            "detail-type": "eventforge.query.submitted",
+            "detail-type": "eventforge.project.submitted",
             "source": "eventforge.api",
             "detail": json.loads(event.model_dump_json()),
         }
@@ -238,15 +244,16 @@ async def test_dlq_worker_deletes_message_on_success() -> None:
 
 
 def test_parse_eventbridge_sqs_body_works_for_dlq_payload() -> None:
-    event = build_query_submitted_event(
+    event = build_project_submitted_event(
         job_id=UUID("11111111-1111-4111-8111-111111111111"),
         correlation_id="corr-dlq",
-        topic="DLQ parse test",
+        name="DLQ parse test",
+        schema_json={"type": "object", "properties": {}},
     )
     body = json.dumps(
         {
             "version": "0",
-            "detail-type": "eventforge.query.submitted",
+            "detail-type": "eventforge.project.submitted",
             "source": "eventforge.api",
             "detail": json.loads(event.model_dump_json()),
         }
@@ -254,4 +261,4 @@ def test_parse_eventbridge_sqs_body_works_for_dlq_payload() -> None:
     detail = parse_eventbridge_sqs_body(body)
     parsed = parse_failed_event_detail(detail)
     assert parsed.job_id == event.job_id
-    assert parsed.detail_type == "eventforge.query.submitted"
+    assert parsed.detail_type == "eventforge.project.submitted"
