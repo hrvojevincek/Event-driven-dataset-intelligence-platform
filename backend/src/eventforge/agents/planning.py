@@ -7,11 +7,11 @@ from eventforge.core.otel import traced_agent
 from eventforge.db.models import AnnotationTask, JobStageName
 from eventforge.db.repositories import (
     AnnotationTaskRepository,
-    JobRepository,
-    JobStageRepository,
     ProcessedEventRepository,
+    ProjectRepository,
     SegmentRepository,
 )
+from eventforge.db.repositories.job import JobStageRepository
 from eventforge.events.deterministic import deterministic_event_id
 from eventforge.events.publisher import EVENT_SOURCE_PLANNING, EventPublisher, EventPublishError
 from eventforge.events.schemas import (
@@ -28,30 +28,30 @@ from eventforge.services.planning.task_builder import annotation_tasks_from_plan
 
 async def _load_or_create_tasks(
     session: AsyncSession,
-    job_id: uuid.UUID,
+    project_id: uuid.UUID,
     segment_ids: list[uuid.UUID],
     *,
     segments_per_task: int | None = None,
 ) -> list[AnnotationTask]:
     task_repo = AnnotationTaskRepository(session)
-    existing = await task_repo.list_by_job_id(job_id)
+    existing = await task_repo.list_by_project_id(project_id)
     if existing:
         return existing
 
-    job_repo = JobRepository(session)
-    job = await job_repo.get_by_id(job_id)
-    if job is None:
-        msg = f"Job not found for planning: {job_id}"
+    project_repo = ProjectRepository(session)
+    project = await project_repo.get_by_id(project_id)
+    if project is None:
+        msg = f"Project not found for planning: {project_id}"
         raise ValueError(msg)
 
     segment_repo = SegmentRepository(session)
     segments = await segment_repo.list_by_ids(segment_ids)
     if len(segments) != len(segment_ids):
-        msg = f"Segments missing for planning job: {job_id}"
+        msg = f"Segments missing for planning project: {project_id}"
         raise ValueError(msg)
 
-    planned = build_annotation_tasks(job, segments, segments_per_task=segments_per_task)
-    tasks = annotation_tasks_from_planned(job_id, planned)
+    planned = build_annotation_tasks(project, segments, segments_per_task=segments_per_task)
+    tasks = annotation_tasks_from_planned(project_id, planned)
     session.add_all(tasks)
     await session.flush()
     return tasks
@@ -70,33 +70,36 @@ async def process_preprocessing_completed(
     if not await processed_repo.try_claim(event_id, WORKER_NAME_PLANNING):
         return None
 
-    job_repo = JobRepository(session)
+    project_repo = ProjectRepository(session)
     stage_repo = JobStageRepository(session)
 
-    job = await job_repo.get_by_id(event.job_id)
-    if job is None:
-        msg = f"Job not found for planning: {event.job_id}"
+    project = await project_repo.get_by_id(event.job_id)
+    if project is None:
+        msg = f"Project not found for planning: {event.job_id}"
         raise ValueError(msg)
 
-    planning_stage = await stage_repo.get_by_job_and_stage(job.id, JobStageName.PLANNING.value)
+    planning_stage = await stage_repo.get_by_job_and_stage(
+        project.id,
+        JobStageName.PLANNING.value,
+    )
     if planning_stage is None:
-        msg = f"Planning stage missing for job: {job.id}"
+        msg = f"Planning stage missing for project: {project.id}"
         raise ValueError(msg)
 
     settings = get_settings()
     await stage_repo.mark_running(planning_stage)
     tasks = await _load_or_create_tasks(
         session,
-        job.id,
+        project.id,
         event.payload.segment_ids,
         segments_per_task=settings.planning_segments_per_task,
     )
 
     completed_event = build_planning_completed_event(
-        job_id=job.id,
+        job_id=project.id,
         correlation_id=event.correlation_id,
         task_ids=[task.id for task in tasks],
-        event_id=deterministic_event_id(job.id, DETAIL_TYPE_PLANNING_COMPLETED),
+        event_id=deterministic_event_id(project.id, DETAIL_TYPE_PLANNING_COMPLETED),
     )
 
     await stage_repo.mark_completed(planning_stage)

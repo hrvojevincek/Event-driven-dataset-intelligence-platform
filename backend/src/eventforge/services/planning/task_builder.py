@@ -5,7 +5,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from eventforge.db.models import AnnotationTask, Job, Segment
+from eventforge.db.models import AnnotationTask, Project, Segment
 from eventforge.services.intake.templates import (
     DOCUMENT_CLASSIFICATION_TEMPLATE,
     SUPPORT_CALL_TEMPLATE,
@@ -27,7 +27,7 @@ class PlannedTask:
 
 
 def build_annotation_tasks(
-    job: Job,
+    project: Project,
     segments: list[Segment],
     *,
     segments_per_task: int | None = None,
@@ -37,13 +37,13 @@ def build_annotation_tasks(
         msg = "At least one segment is required to plan annotation tasks"
         raise ValueError(msg)
 
-    label_schema = load_label_schema(job.schema_json, job.schema_template)
-    batch_size = segments_per_task or segments_per_task_for_template(job.schema_template)
+    label_schema = load_label_schema(project.schema_json, project.schema_template)
+    batch_size = segments_per_task or segments_per_task_for_template(project.schema_template)
     if batch_size < 1:
         msg = "segments_per_task must be >= 1"
         raise ValueError(msg)
 
-    instructions = _build_instructions(label_schema, job.schema_template)
+    instructions = _build_instructions(label_schema, project.schema_template)
     ordered = sorted(segments, key=lambda segment: (segment.asset_id, segment.segment_index))
 
     planned: list[PlannedTask] = []
@@ -58,7 +58,7 @@ def build_annotation_tasks(
                 segment_ids_json=_encode_segment_payload(
                     segment_ids=segment_ids,
                     label_schema=label_schema,
-                    schema_template=job.schema_template,
+                    schema_template=project.schema_template,
                 ),
             )
         )
@@ -66,13 +66,13 @@ def build_annotation_tasks(
 
 
 def annotation_tasks_from_planned(
-    job_id: uuid.UUID,
+    project_id: uuid.UUID,
     planned: list[PlannedTask],
 ) -> list[AnnotationTask]:
     """Materialize ORM rows from planned tasks."""
     return [
         AnnotationTask(
-            job_id=job_id,
+            job_id=project_id,
             task_index=task.task_index,
             instructions=task.instructions,
             segment_ids_json=task.segment_ids_json,

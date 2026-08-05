@@ -3,7 +3,7 @@ import uuid
 
 import pytest
 
-from eventforge.db.models import Job, Segment
+from eventforge.db.models import Project, Segment
 from eventforge.services.intake.templates import (
     DOCUMENT_CLASSIFICATION_TEMPLATE,
     SUPPORT_CALL_TEMPLATE,
@@ -52,7 +52,7 @@ def test_segments_per_task_defaults_by_template() -> None:
 
 
 def test_build_annotation_tasks_batches_support_call_segments_one_per_task() -> None:
-    job = Job(
+    project = Project(
         user_id=uuid.uuid4(),
         correlation_id="corr-planning",
         name="Support batch",
@@ -73,7 +73,7 @@ def test_build_annotation_tasks_batches_support_call_segments_one_per_task() -> 
     asset_id = uuid.uuid4()
     segments = [
         Segment(
-            job_id=job.id,
+            job_id=project.id,
             asset_id=asset_id,
             segment_index=index,
             content=f"Segment {index}",
@@ -81,7 +81,7 @@ def test_build_annotation_tasks_batches_support_call_segments_one_per_task() -> 
         for index in range(3)
     ]
 
-    planned = build_annotation_tasks(job, segments)
+    planned = build_annotation_tasks(project, segments)
 
     assert len(planned) == 3
     assert planned[0].task_index == 0
@@ -98,7 +98,7 @@ def test_build_annotation_tasks_batches_support_call_segments_one_per_task() -> 
 
 
 def test_build_annotation_tasks_batches_document_segments() -> None:
-    job = Job(
+    project = Project(
         user_id=uuid.uuid4(),
         correlation_id="corr-docs",
         name="Docs batch",
@@ -118,7 +118,7 @@ def test_build_annotation_tasks_batches_document_segments() -> None:
     asset_id = uuid.uuid4()
     segments = [
         Segment(
-            job_id=job.id,
+            job_id=project.id,
             asset_id=asset_id,
             segment_index=index,
             content=f"Paragraph {index}",
@@ -126,7 +126,7 @@ def test_build_annotation_tasks_batches_document_segments() -> None:
         for index in range(7)
     ]
 
-    planned = build_annotation_tasks(job, segments)
+    planned = build_annotation_tasks(project, segments)
 
     assert len(planned) == 2
     assert len(planned[0].segment_ids) == 5

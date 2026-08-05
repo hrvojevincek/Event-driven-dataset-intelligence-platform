@@ -17,6 +17,9 @@ class AnnotationTaskRepository(BaseRepository):
         )
         return list(result.scalars().all())
 
+    async def list_by_project_id(self, project_id: uuid.UUID) -> list[AnnotationTask]:
+        return await self.list_by_job_id(project_id)
+
     async def list_by_ids(self, task_ids: list[uuid.UUID]) -> list[AnnotationTask]:
         if not task_ids:
             return []
