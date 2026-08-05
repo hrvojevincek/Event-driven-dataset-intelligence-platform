@@ -14,8 +14,3 @@ def deterministic_pipeline_failed_event_id(job_id: UUID, failed_event_id: UUID) 
 def deterministic_annotation_task_id(job_id: UUID, task_index: int) -> UUID:
     """Stable task_id for an annotation sub-task within a job."""
     return uuid5(NAMESPACE_URL, f"{job_id}:annotation-task:{task_index}")
-
-
-def deterministic_research_task_id(job_id: UUID, task_index: int) -> UUID:
-    """Stable task_id for a research sub-task within a job (legacy alias)."""
-    return deterministic_annotation_task_id(job_id, task_index)

@@ -1,3 +1,11 @@
+"""Planning stage: batch segments into annotation tasks for the LLM workers.
+
+Consumes ``preprocessing.completed``, loads the project and its segments, groups
+them into ``AnnotationTask`` batches (size from ``planning_segments_per_task`` and
+the project's label schema template), persists tasks (idempotent per project), and
+publishes ``planning.completed`` with task IDs for the annotation stage.
+"""
+
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession

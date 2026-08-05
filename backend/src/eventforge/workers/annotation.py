@@ -32,7 +32,7 @@ class AnnotationWorker(StageWorker):
         detail_type = detail.get("detail_type")
 
         if detail_type == DETAIL_TYPE_PLANNING_COMPLETED:
-            if self._settings.research_orchestration_mode == "step_functions":
+            if self._settings.annotation_orchestration_mode == "step_functions":
                 logger.info(
                     "Skipping planning.completed; Step Functions handles fan-out",
                     extra={

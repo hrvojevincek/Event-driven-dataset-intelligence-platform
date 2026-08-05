@@ -20,7 +20,6 @@ class Settings(BaseSettings):
 
     environment: str = "local"
     log_level: str = "INFO"
-    mock_external_apis: bool | None = None
 
     postgres_host: str = "localhost"
     postgres_port: int = 5432
@@ -42,16 +41,11 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     anthropic_api_key: str = ""
-    tavily_api_key: str = ""
     llm_default_model: str = "gpt-4o-mini"
     llm_max_output_tokens: int = 4096
     preprocessing_segment_size_tokens: int = 512
     preprocessing_segment_overlap_tokens: int = 50
     planning_segments_per_task: int | None = None
-    knowledge_rag_top_k: int = 10
-    knowledge_max_entities: int = 4
-    research_rag_top_k: int = 8
-    research_tavily_max_results: int = 3
     llm_max_retries: int = 3
     llm_retry_base_delay_seconds: float = 1.0
     llm_retry_max_delay_seconds: float = 30.0
@@ -66,23 +60,15 @@ class Settings(BaseSettings):
     otel_exporter_otlp_endpoint: str = "http://localhost:4317"
     otel_service_name: str = "eventforge-api"
 
-    research_orchestration_mode: Literal["local", "step_functions"] = "local"
+    annotation_orchestration_mode: Literal["local", "step_functions"] = "local"
 
     upload_root: str = "data/uploads"
     max_upload_file_bytes: int = 50 * 1024 * 1024
     max_upload_files_per_project: int = 50
 
-    @field_validator("mock_external_apis", mode="before")
-    @classmethod
-    def _empty_mock_flag(cls, value: object) -> object:
-        if value == "":
-            return None
-        return value
-
     @field_validator(
         "openai_api_key",
         "anthropic_api_key",
-        "tavily_api_key",
         "postgres_password",
         mode="before",
     )
@@ -138,13 +124,6 @@ class Settings(BaseSettings):
             msg = "llm_retry_base_delay_seconds must not exceed llm_retry_max_delay_seconds"
             raise ValueError(msg)
         return self
-
-    @property
-    def use_mock_external_apis(self) -> bool:
-        """Use fixture legacy embeddings instead of paid OpenAI embedding API."""
-        if self.mock_external_apis is not None:
-            return self.mock_external_apis
-        return self.environment == "local"
 
     @property
     def intake_queue_name(self) -> str:

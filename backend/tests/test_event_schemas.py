@@ -168,8 +168,6 @@ def test_round_trip_through_pydantic() -> None:
         "annotation.all_completed.schema.json",
         "export.completed.schema.json",
         "pipeline.failed.schema.json",
-        # Legacy schemas kept until remaining research cleanup
-        "embedding.completed.schema.json",
     ],
 )
 def test_json_schema_files_are_valid_json(filename: str) -> None:
