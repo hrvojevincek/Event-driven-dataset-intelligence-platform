@@ -2,7 +2,7 @@
 
 **Event-driven dataset intelligence platform** — upload files + annotation schema → pipeline labels segments in parallel → JSONL export with QC metrics and live React Flow visibility.
 
-Portfolio project focused on production event-driven patterns — idempotency, DLQ, correlation IDs, cost controls, observability — with a BeatPulse-style labeling pipeline as the workload.
+Portfolio project focused on production event-driven patterns — idempotency, DLQ, correlation IDs, cost controls, observability — with a labeling pipeline as the workload.
 
 **Pivot status:** Phases 0–8 complete (data model → full pipeline → UI). See [`docs/PIVOT_PLAN.md`](./docs/PIVOT_PLAN.md).
 
