@@ -415,13 +415,102 @@ The dev ALB exposes an **open API** — anyone with the URL can submit queries a
 
 ---
 
+## ADR-014: Pivot to Dataset Intelligence Platform
+
+**Status:** Accepted  
+**Date:** 2026-08-04
+
+### Context
+
+The research/RAG pipeline (Tavily ingestion → pgvector embedding → entity extraction → parallel web research → markdown synthesis) delivered weak AI value relative to infrastructure complexity. Embeddings were computed over Tavily snippets, not full documents; RAG retrieval duplicated what Tavily follow-up already did.
+
+The event-driven architecture (EventBridge, SQS, Step Functions, idempotency, OTEL, SSE) remains a strong portfolio asset. The **workload** should change to match a real industry pattern: **dataset intelligence extraction** (cf. BeatPulse Labs — custom annotation pipelines for enterprise AI training data).
+
+### Decision
+
+Pivot EventForge from a **research Q&A platform** to a **dataset intelligence platform**:
+
+- **Input:** Uploaded assets (documents v1) + user-defined annotation schema
+- **Output:** Model-ready JSONL + QC report
+- **Pipeline:** Intake → Preprocessing → Planning → Parallel Annotation → Export
+- **Keep:** EventBridge + SQS + Step Functions, workers, React Flow, cost tracking, Terraform ECS stack
+- **Remove:** Tavily, pgvector/RAG, research synthesis, query/topic model
+
+v1 domain: **documents** (txt, md, pdf). LLM pre-labeling for MVP; HITL review deferred to v2.
+
+### Rationale
+
+| Factor | Research (old) | Dataset (new) |
+| ------ | -------------- | ------------- |
+| Distributed infra justification | Weak — RAG is synchronous-friendly | Strong — parallel annotation at scale |
+| AI value | Redundant web search + thin RAG | Structured labeling with provenance |
+| Portfolio story | "Multi-agent research" (oversold) | Event-driven data pipeline (accurate) |
+| Industry alignment | Generic chatbot pattern | BeatPulse / Scale / Snorkel pattern |
+| Complexity | pgvector + Tavily + 5 LLM stages | Postgres OLTP + 3 LLM stages |
+
+### Trade-offs
+
+- Breaking change — legacy research flow removed in place (not parallel product)
+- `docs/ARCHITECTURE.md` and `docs/PRD.md` lag until Phase 10
+- Physical SQS queue names may stay legacy until Phase 9 (cosmetic)
+
+### Alternatives considered
+
+- **Keep research, simplify to single RAG call** — rejected; still wrong product, keeps pgvector
+- **Full rewrite (new repo)** — rejected; reuse infra, frontend, worker patterns
+- **DataForge rebrand** — deferred; keep EventForge name (events still core)
+
+### References
+
+- `docs/DATASET_PLATFORM.md` — target product
+- `docs/PIVOT_PLAN.md` — phased implementation checklist
+- `.cursor/rules/dataset-pivot.mdc` — agent conventions during pivot
+
+### Supersedes / revises
+
+- **ADR-003** (Postgres + pgvector) — pgvector dropped; Postgres OLTP only
+- **ADR-009** (Tavily) — superseded for ingestion; web search removed from pipeline
+
+---
+
+## ADR-015: Local-Only Scope (No AWS Deploy)
+
+**Status:** Accepted  
+**Date:** 2026-08-05
+
+### Context
+
+Phase 5 built Terraform modules for ECS, RDS, EventBridge, etc. During the dataset pivot grilling session, the decision was made to **keep the event-driven worker pattern locally** (LocalStack) but **not deploy or maintain AWS infrastructure** for the pivot target.
+
+### Decision
+
+- **Active:** Docker Compose — Postgres + LocalStack + backend + frontend + OTEL
+- **Active:** SQS workers + EventBridge + Step Functions via LocalStack init scripts
+- **Inactive:** Terraform apply, ECS deploy, cloud E2E, Secrets Manager ops
+- **Storage:** Local disk only (`./data/uploads/`); no S3 for pivot MVP
+- **Terraform:** Keep `infra/terraform/` in repo; add README note that it is archived reference from Phase 5
+
+### Rationale
+
+- Portfolio demo reliability — LocalStack is enough to show event-driven patterns without AWS cost/ops
+- Pivot velocity — no deploy blockers while replacing research pipeline
+- Interview option — can still reference Terraform work without maintaining it
+
+### Trade-offs
+
+- No production deployment story for pivot MVP
+- Step Functions Map state remains imperfect in LocalStack (sequential fallback)
+- S3 storage backend deferred to v2
+
+---
+
 ## Decision Log
 
 | ADR | Title                              | Status               |
 | --- | ---------------------------------- | -------------------- |
 | 001 | Hybrid Next.js + FastAPI           | Accepted             |
 | 002 | EventBridge + SQS + Step Functions | Accepted             |
-| 003 | Postgres + pgvector                | Accepted             |
+| 003 | Postgres + pgvector                | Superseded (ADR-014) |
 | 004 | AWS Cognito Auth                   | Superseded (ADR-013) |
 | 005 | OpenTelemetry                      | Accepted             |
 | 006 | Terraform IaC                      | Accepted             |
@@ -432,3 +521,5 @@ The dev ALB exposes an **open API** — anyone with the URL can submit queries a
 | 011 | LLM Cost Tracking                  | Accepted             |
 | 012 | All-in-AWS ECS Fargate             | Accepted             |
 | 013 | No Authentication (MVP)            | Accepted             |
+| 014 | Dataset Intelligence Pivot         | Accepted             |
+| 015 | Local-Only Scope (No AWS Deploy)   | Accepted             |

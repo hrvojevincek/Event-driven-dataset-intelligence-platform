@@ -32,7 +32,7 @@ export function QuerySubmitForm() {
   const [depth, setDepth] = useState<SubmitQueryRequest["depth"]>("standard");
   const [maxSources, setMaxSources] = useState("");
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const trimmedTopic = topic.trim();

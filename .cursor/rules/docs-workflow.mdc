@@ -32,11 +32,13 @@ alwaysApply: false
 
 | File | When to read |
 |------|--------------|
-| `docs/LINEAR.md` | Issue index, dependencies, what's next |
-| `docs/TASKS.md` | Phase progress, exit criteria |
-| `docs/ARCHITECTURE.md` | Pipeline, events, diagrams |
-| `docs/TECH_DECISIONS.md` | Before changing stack |
-| `docs/PRD.md` | Product scope |
+| `docs/DATASET_PLATFORM.md` | **Pivot:** target product, terminology, success criteria |
+| `docs/PIVOT_PLAN.md` | **Pivot:** phase checklist, progress, file touch map |
+| `docs/LINEAR.md` | Legacy issue index (Phases 0–5) |
+| `docs/TASKS.md` | Legacy phase progress |
+| `docs/ARCHITECTURE.md` | Pipeline diagrams (legacy until pivot Phase 10) |
+| `docs/TECH_DECISIONS.md` | ADR-014 pivot + stack decisions |
+| `docs/PRD.md` | Product scope (legacy until pivot Phase 10) |
 | `docs/ISSUES.md` | Postmortems — append after non-trivial infra/CI/debug fixes (placeholders only, no secrets) |
 
 ## On non-trivial bug fix

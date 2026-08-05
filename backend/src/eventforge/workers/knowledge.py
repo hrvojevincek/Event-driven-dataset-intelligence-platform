@@ -1,7 +1,10 @@
 import logging
 from typing import Any
 
-from eventforge.agents.knowledge import parse_embedding_completed_event, process_embedding_completed
+from eventforge.agents.knowledge import (
+    parse_embedding_completed_event,
+    process_embedding_completed,
+)
 from eventforge.core.config import get_settings
 from eventforge.db.session import get_session_factory
 from eventforge.events.parser import parse_eventbridge_sqs_body
@@ -28,7 +31,9 @@ class KnowledgeWorker(SqsConsumer):
 
         async def _process():
             async with self._session_factory() as session:
-                return await process_embedding_completed(session, self._publisher, event)
+                return await process_embedding_completed(
+                    session, self._publisher, event
+                )
 
         result = await run_with_cost_cap_handling(
             self._session_factory,

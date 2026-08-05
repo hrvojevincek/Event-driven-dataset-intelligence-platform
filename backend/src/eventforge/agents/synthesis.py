@@ -3,7 +3,13 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from eventforge.core.otel import traced_agent
-from eventforge.db.models import Job, JobStageName, JobStatus, ResearchNote, SynthesisReport
+from eventforge.db.models import (
+    Job,
+    JobStageName,
+    JobStatus,
+    ResearchNote,
+    SynthesisReport,
+)
 from eventforge.db.repositories import (
     JobRepository,
     JobStageRepository,
@@ -14,7 +20,11 @@ from eventforge.db.repositories import (
     SynthesisReportRepository,
 )
 from eventforge.events.deterministic import deterministic_event_id
-from eventforge.events.publisher import EVENT_SOURCE_SYNTHESIS, EventPublisher, EventPublishError
+from eventforge.events.publisher import (
+    EVENT_SOURCE_SYNTHESIS,
+    EventPublisher,
+    EventPublishError,
+)
 from eventforge.events.schemas import (
     DETAIL_TYPE_SYNTHESIS_COMPLETED,
     WORKER_NAME_SYNTHESIS,
@@ -81,30 +91,42 @@ async def _run_synthesis(
     expected_tasks = expected_research_task_count(entities)
     note_count = await note_repo.count_by_job_id(job.id)
     if expected_tasks == 0 or note_count < expected_tasks:
-        await processed_repo.release_claim(str(trigger_event_id), WORKER_NAME_SYNTHESIS)
+        await processed_repo.release_claim(
+            str(trigger_event_id), WORKER_NAME_SYNTHESIS
+        )
         await session.commit()
         return None
 
-    synthesis_key = str(deterministic_event_id(job.id, DETAIL_TYPE_SYNTHESIS_COMPLETED))
-    if not await processed_repo.try_claim(synthesis_key, WORKER_NAME_SYNTHESIS):
+    synthesis_key = str(
+        deterministic_event_id(job.id, DETAIL_TYPE_SYNTHESIS_COMPLETED)
+    )
+    if not await processed_repo.try_claim(
+        synthesis_key, WORKER_NAME_SYNTHESIS
+    ):
         await session.commit()
         return None
 
-    synthesis_stage = await stage_repo.get_by_job_and_stage(job.id, JobStageName.SYNTHESIS.value)
+    synthesis_stage = await stage_repo.get_by_job_and_stage(
+        job.id, JobStageName.SYNTHESIS.value
+    )
     if synthesis_stage is None:
         msg = f"Synthesis stage missing for job: {job.id}"
         raise ValueError(msg)
 
     notes = await note_repo.list_by_job_id(job.id)
     await stage_repo.mark_running(synthesis_stage)
-    report = await _load_or_create_report(session, job, notes, llm_client=llm_client)
+    report = await _load_or_create_report(
+        session, job, notes, llm_client=llm_client
+    )
 
     completed_event = build_synthesis_completed_event(
         job_id=job.id,
         correlation_id=correlation_id,
         report_id=report.id,
         note_count=len(notes),
-        event_id=deterministic_event_id(job.id, DETAIL_TYPE_SYNTHESIS_COMPLETED),
+        event_id=deterministic_event_id(
+            job.id, DETAIL_TYPE_SYNTHESIS_COMPLETED
+        ),
     )
 
     job.status = JobStatus.COMPLETED.value
@@ -114,8 +136,12 @@ async def _run_synthesis(
     try:
         await publisher.publish(completed_event, source=EVENT_SOURCE_SYNTHESIS)
     except EventPublishError:
-        await processed_repo.release_claim(synthesis_key, WORKER_NAME_SYNTHESIS)
-        await processed_repo.release_claim(str(trigger_event_id), WORKER_NAME_SYNTHESIS)
+        await processed_repo.release_claim(
+            synthesis_key, WORKER_NAME_SYNTHESIS
+        )
+        await processed_repo.release_claim(
+            str(trigger_event_id), WORKER_NAME_SYNTHESIS
+        )
         await session.commit()
         raise
 
@@ -192,14 +218,18 @@ async def process_research_all_completed(
     )
 
 
-def parse_research_task_completed_event(detail: dict) -> ResearchTaskCompletedEvent:
+def parse_research_task_completed_event(
+    detail: dict,
+) -> ResearchTaskCompletedEvent:
     if detail.get("detail_type") != DETAIL_TYPE_RESEARCH_TASK_COMPLETED:
         msg = f"Unexpected detail_type: {detail.get('detail_type')}"
         raise ValueError(msg)
     return ResearchTaskCompletedEvent.model_validate(detail)
 
 
-def parse_research_all_completed_event(detail: dict) -> ResearchAllCompletedEvent:
+def parse_research_all_completed_event(
+    detail: dict,
+) -> ResearchAllCompletedEvent:
     if detail.get("detail_type") != DETAIL_TYPE_RESEARCH_ALL_COMPLETED:
         msg = f"Unexpected detail_type: {detail.get('detail_type')}"
         raise ValueError(msg)

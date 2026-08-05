@@ -305,8 +305,31 @@ Project: EventForge
 
 ---
 
+## Phase 7: Dataset Intelligence Pivot
+
+**Goal:** Transform from research/RAG platform → dataset factory (BeatPulse-style). Raw files in, labeled JSONL out.
+
+**Status:** Active (2026-08-05) — decisions locked (grilling session)  
+**Source of truth:** `docs/PIVOT_PLAN.md` · `docs/DATASET_PLATFORM.md` · ADR-014, ADR-015
+
+| Phase | Summary                           | Status  |
+| ----- | --------------------------------- | ------- |
+| 0     | Decisions & docs                  | ✅ Done |
+| 1     | Data model (drop pgvector)        | ✅ Done |
+| 2     | Event contracts                   | ⬜      |
+| 3–7   | Pipeline stages (intake → export) | ⬜      |
+| 8     | Frontend (60/40 demo UX)          | ⬜      |
+| 9     | Local infra cleanup               | ⬜      |
+| 10    | README + demo fixture             | ⬜      |
+
+**Pivot exit criteria:** Support-call fixture → JSONL + QC. LocalStack only. No Tavily/pgvector.
+
+**Key decisions:** EventForge name · documents + support-call demo · template+JSON schema · local disk · annotation Map only · Terraform archived.
+
+---
+
 ## Current Priority
 
-**Backend-first track:** Phase 2–4 complete. **Phase 5:** AWS dev live + CI/CD done ([KRE-156](https://linear.app/kreativbiro/issue/KRE-156)–[KRE-165](https://linear.app/kreativbiro/issue/KRE-165)). **Next:** cloud E2E verify, Phase 6 polish.
+**Dataset pivot Phase 2** — event contracts. See `docs/PIVOT_PLAN.md`.
 
 Verify: `./scripts/verify-pipeline-e2e.sh` · `./scripts/verify-dlq-redrive.sh` · run DLQ worker: `uv run --project backend python -m eventforge.workers.dlq`

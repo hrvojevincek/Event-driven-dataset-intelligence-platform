@@ -5,7 +5,9 @@ alwaysApply: true
 
 # EventForge — Cursor Agent Context
 
-Event-driven multi-agent research platform. Users submit queries → EventBridge pipeline (ingestion → embedding → knowledge → parallel research → synthesis) → dashboard with live React Flow.
+> **ACTIVE PIVOT (2026-08-04):** Building a **dataset intelligence platform** (files in → labeled JSONL out). Read `docs/DATASET_PLATFORM.md` + `docs/PIVOT_PLAN.md`. Rule: `.cursor/rules/dataset-pivot.mdc`. Legacy research pipeline code still exists until pivot phases land.
+
+Event-driven dataset intelligence platform (target). Users upload assets + schema → EventBridge pipeline (intake → preprocessing → planning → parallel annotation → export) → dashboard with live React Flow.
 
 **Portfolio goal:** production patterns — scalability, resilience, observability, cost awareness.
 
@@ -15,12 +17,12 @@ Event-driven multi-agent research platform. Users submit queries → EventBridge
 | ------------- | ---------------------------------------------------------- |
 | Frontend      | Next.js 15 App Router, TS, Tailwind, shadcn/ui, React Flow |
 | Backend       | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2.0         |
-| Events        | AWS EventBridge + SQS + Step Functions                     |
-| Data          | Postgres 16 + pgvector                                     |
+| Events        | EventBridge + SQS + Step Functions (LocalStack locally)    |
+| Data          | Postgres 16 (OLTP; pgvector removed in pivot)              |
 | Auth          | Mock user (no login)                                       |
 | Observability | OpenTelemetry → OTLP                                       |
-| IaC           | Terraform (`infra/terraform/`)                             |
-| Local         | Docker Compose + LocalStack                                |
+| IaC           | Terraform in repo — **archived, not maintained** (ADR-015) |
+| Local         | Docker Compose + LocalStack + workers                      |
 
 ## Layout
 
@@ -33,7 +35,7 @@ Event-driven multi-agent research platform. Users submit queries → EventBridge
 
 ```bash
 ./scripts/setup-local.sh   # first time
-make dev                   # Postgres (pgvector) + LocalStack
+make dev                   # Postgres + LocalStack + backend + frontend
 make down / make logs
 ```
 
@@ -73,6 +75,5 @@ Phase 1+: `uv run uvicorn eventforge.main:app --reload` (backend), `npm run dev`
 - **Project:** [EventForge](https://linear.app/kreativbiro/project/eventforge-f35070f0931e) on team `Kreativbiro`
 - **Active work:** Linear MCP (`list_issues`, `get_issue`) — not just markdown
 - **Mirror:** `docs/TASKS.md` + `docs/LINEAR.md` issue index
-- **Next issue:** Cloud E2E verify on AWS dev, then Phase 6 polish.
-
-**Phase status:** Phases 0–4 complete. Phase 5 AWS dev + CI/CD + Step Functions + observability ([KRE-156](https://linear.app/kreativbiro/issue/KRE-156)–[KRE-165](https://linear.app/kreativbiro/issue/KRE-165)). **Next:** cloud E2E verify, Phase 6.
+- **Next pivot work:** Phase 2 — event contracts (see `docs/PIVOT_PLAN.md`)
+- **No AWS deploy** for pivot — LocalStack only (ADR-015)

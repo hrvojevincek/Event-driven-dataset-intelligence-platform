@@ -1,7 +1,13 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from eventforge.core.otel import traced_agent
-from eventforge.db.models import Job, JobStageName, JobStatus, Source, StageStatus
+from eventforge.db.models import (
+    Job,
+    JobStageName,
+    JobStatus,
+    Source,
+    StageStatus,
+)
 from eventforge.db.repositories import (
     JobRepository,
     JobStageRepository,
@@ -9,7 +15,11 @@ from eventforge.db.repositories import (
     SourceRepository,
 )
 from eventforge.events.deterministic import deterministic_event_id
-from eventforge.events.publisher import EVENT_SOURCE_INGESTION, EventPublisher, EventPublishError
+from eventforge.events.publisher import (
+    EVENT_SOURCE_INGESTION,
+    EventPublisher,
+    EventPublishError,
+)
 from eventforge.events.schemas import (
     DETAIL_TYPE_INGESTION_COMPLETED,
     WORKER_NAME_INGESTION,
@@ -37,7 +47,9 @@ async def _load_or_create_sources(
         return existing
 
     client = search_client or get_tavily_client()
-    max_results = resolve_source_count(depth=job.depth, max_sources=job.max_sources)
+    max_results = resolve_source_count(
+        depth=job.depth, max_sources=job.max_sources
+    )
     search_depth = resolve_tavily_search_depth(job.depth)
     results = await client.search(
         job.topic,
@@ -85,7 +97,9 @@ async def process_query_submitted(
         msg = f"Job not found for ingestion: {event.job_id}"
         raise ValueError(msg)
 
-    ingestion_stage = await stage_repo.get_by_job_and_stage(job.id, JobStageName.INGESTION.value)
+    ingestion_stage = await stage_repo.get_by_job_and_stage(
+        job.id, JobStageName.INGESTION.value
+    )
     if ingestion_stage is None:
         msg = f"Ingestion stage missing for job: {job.id}"
         raise ValueError(msg)
@@ -100,7 +114,9 @@ async def process_query_submitted(
         job_id=job.id,
         correlation_id=event.correlation_id,
         source_ids=[source.id for source in sources],
-        event_id=deterministic_event_id(job.id, DETAIL_TYPE_INGESTION_COMPLETED),
+        event_id=deterministic_event_id(
+            job.id, DETAIL_TYPE_INGESTION_COMPLETED
+        ),
     )
 
     await stage_repo.mark_completed(ingestion_stage)
