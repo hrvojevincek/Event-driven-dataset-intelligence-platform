@@ -49,7 +49,7 @@ async def _seed_job_with_stages(db_session: AsyncSession) -> Job:
         user_id=user.id,
         correlation_id=f"corr-fail-{suffix}",
         name="Pipeline failure test",
-        schema_json="{}",
+        schema_json={},
         status=JobStatus.PENDING.value,
     )
     db_session.add(job)

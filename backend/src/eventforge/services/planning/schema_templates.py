@@ -17,13 +17,16 @@ TEMPLATE_SEGMENTS_PER_TASK: dict[str, int] = {
 }
 
 
-def load_label_schema(schema_json: str, template_id: str | None) -> dict[str, Any]:
+def load_label_schema(schema_json: dict[str, Any] | str, template_id: str | None) -> dict[str, Any]:
     """Parse and validate the project's label schema before task planning."""
-    try:
-        parsed = json.loads(schema_json)
-    except json.JSONDecodeError as exc:
-        msg = "schema_json must be valid JSON"
-        raise ValueError(msg) from exc
+    if isinstance(schema_json, str):
+        try:
+            parsed = json.loads(schema_json)
+        except json.JSONDecodeError as exc:
+            msg = "schema_json must be valid JSON"
+            raise ValueError(msg) from exc
+    else:
+        parsed = schema_json
     if not isinstance(parsed, dict):
         msg = "schema_json must be a JSON object"
         raise ValueError(msg)

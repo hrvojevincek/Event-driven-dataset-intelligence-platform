@@ -44,40 +44,9 @@ class LabelBatchResult:
     """Validated labels for a whole annotation task."""
 
     segment_labels: list[SegmentLabels]
-    labels_json: str
+    labels_json: dict[str, Any]
     confidence: Decimal
     low_confidence: bool
-
-
-def decode_task_payload(
-    segment_ids_json: str,
-) -> tuple[list[uuid.UUID], dict[str, Any], str | None]:
-    """Parse planning-encoded task payload into segment IDs, schema, and template."""
-    try:
-        parsed = json.loads(segment_ids_json)
-    except json.JSONDecodeError as exc:
-        msg = "segment_ids_json must be valid JSON"
-        raise ValueError(msg) from exc
-    if not isinstance(parsed, dict):
-        msg = "segment_ids_json must be a JSON object"
-        raise ValueError(msg)
-
-    raw_ids = parsed.get("segment_ids")
-    if not isinstance(raw_ids, list) or not raw_ids:
-        msg = "segment_ids_json must include a non-empty segment_ids list"
-        raise ValueError(msg)
-
-    segment_ids = [uuid.UUID(str(segment_id)) for segment_id in raw_ids]
-    label_schema = parsed.get("label_schema")
-    if not isinstance(label_schema, dict):
-        msg = "segment_ids_json must include label_schema object"
-        raise ValueError(msg)
-
-    schema_template = parsed.get("schema_template")
-    if schema_template is not None and not isinstance(schema_template, str):
-        msg = "schema_template must be a string when present"
-        raise ValueError(msg)
-    return segment_ids, label_schema, schema_template
 
 
 def _strip_fences(content: str) -> str:
@@ -192,9 +161,9 @@ def _parse_label_response(
     return [by_index[index] for index in range(len(segments))]
 
 
-def build_labels_json(segment_labels: list[SegmentLabels]) -> str:
+def build_labels_json(segment_labels: list[SegmentLabels]) -> dict[str, Any]:
     """Serialize per-segment labels for AnnotationBatch.labels_json."""
-    payload = {
+    return {
         "segments": [
             {
                 "segment_id": str(item.segment_id),
@@ -204,7 +173,6 @@ def build_labels_json(segment_labels: list[SegmentLabels]) -> str:
             for item in segment_labels
         ]
     }
-    return json.dumps(payload)
 
 
 def batch_confidence(segment_labels: list[SegmentLabels]) -> Decimal:

@@ -1,6 +1,7 @@
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from eventforge.db.models import AnnotationTask
 from eventforge.db.repositories.base import BaseRepository
@@ -13,6 +14,7 @@ class AnnotationTaskRepository(BaseRepository):
         result = await self.session.execute(
             select(AnnotationTask)
             .where(AnnotationTask.job_id == job_id)
+            .options(selectinload(AnnotationTask.segment_links))
             .order_by(AnnotationTask.task_index)
         )
         return list(result.scalars().all())
@@ -24,6 +26,8 @@ class AnnotationTaskRepository(BaseRepository):
         if not task_ids:
             return []
         result = await self.session.execute(
-            select(AnnotationTask).where(AnnotationTask.id.in_(task_ids))
+            select(AnnotationTask)
+            .where(AnnotationTask.id.in_(task_ids))
+            .options(selectinload(AnnotationTask.segment_links))
         )
         return list(result.scalars().all())

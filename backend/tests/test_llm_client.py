@@ -45,8 +45,8 @@ async def test_llm_usage_repository_log_and_total(db_session: AsyncSession) -> N
     job = Job(
         user_id=user.id,
         correlation_id="corr-llm-cost",
-        topic="LLM cost tracking",
-        depth="standard",
+        name="LLM cost tracking",
+        schema_json={},
         status=JobStatus.PENDING.value,
     )
     db_session.add(job)
@@ -93,8 +93,8 @@ async def test_llm_client_logs_usage_when_session_bound(
     job = Job(
         user_id=user.id,
         correlation_id="corr-llm-client",
-        topic="LLM client test",
-        depth="standard",
+        name="LLM client test",
+        schema_json={},
         status=JobStatus.PENDING.value,
     )
     db_session.add(job)

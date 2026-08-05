@@ -48,18 +48,16 @@ async def _seed_project_with_segments(
         correlation_id=f"corr-planning-{suffix}",
         name="Support calls batch",
         schema_template=SUPPORT_CALL_TEMPLATE,
-        schema_json=json.dumps(
-            {
-                "type": "object",
-                "properties": {
-                    "emotion": {"type": "string"},
-                    "intent": {"type": "string"},
-                    "topic": {"type": "string"},
-                    "resolution_status": {"type": "string"},
-                },
-                "required": ["emotion", "intent", "topic", "resolution_status"],
-            }
-        ),
+        schema_json={
+            "type": "object",
+            "properties": {
+                "emotion": {"type": "string"},
+                "intent": {"type": "string"},
+                "topic": {"type": "string"},
+                "resolution_status": {"type": "string"},
+            },
+            "required": ["emotion", "intent", "topic", "resolution_status"],
+        },
         status=JobStatus.RUNNING.value,
     )
     db_session.add(job)

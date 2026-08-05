@@ -1,4 +1,3 @@
-import json
 from decimal import Decimal
 
 import pytest
@@ -8,6 +7,7 @@ from eventforge.db.models import (
     PIPELINE_STAGE_NAMES,
     AnnotationBatch,
     AnnotationTask,
+    AnnotationTaskSegment,
     Asset,
     AssetFetchStatus,
     DatasetExport,
@@ -33,7 +33,7 @@ async def test_project_model_and_pipeline_stages(db_session: AsyncSession) -> No
     db_session.add(user)
     await db_session.flush()
 
-    schema = json.dumps({"fields": [{"name": "topic", "type": "enum", "values": ["billing"]}]})
+    schema = {"fields": [{"name": "topic", "type": "enum", "values": ["billing"]}]}
     job = Job(
         user_id=user.id,
         correlation_id="corr-project-001",
@@ -65,7 +65,7 @@ async def test_asset_segment_task_batch_export_repositories(db_session: AsyncSes
         user_id=user.id,
         correlation_id="corr-asset-001",
         name="Label run",
-        schema_json="{}",
+        schema_json={},
         status=JobStatus.RUNNING.value,
     )
     db_session.add(job)
@@ -97,18 +97,18 @@ async def test_asset_segment_task_batch_export_repositories(db_session: AsyncSes
         job_id=job.id,
         task_index=0,
         instructions="Label sentiment and topic.",
-        segment_ids_json=json.dumps([str(segment.id)]),
     )
     db_session.add(task)
     await db_session.flush()
+    db_session.add(
+        AnnotationTaskSegment(task_id=task.id, segment_id=segment.id, position=0)
+    )
 
     batch = AnnotationBatch(
         job_id=job.id,
         task_id=task.id,
         task_index=0,
-        labels_json=json.dumps(
-            {str(segment.id): {"topic": "billing", "sentiment": "negative"}}
-        ),
+        labels_json={str(segment.id): {"topic": "billing", "sentiment": "negative"}},
         segment_count=1,
         confidence=Decimal("0.9100"),
     )
@@ -117,7 +117,7 @@ async def test_asset_segment_task_batch_export_repositories(db_session: AsyncSes
     export = DatasetExport(
         job_id=job.id,
         export_content='{"segment_id": "..."}\n',
-        qc_report_json=json.dumps({"coverage_pct": 100.0}),
+        qc_report_json={"coverage_pct": 100.0},
     )
     db_session.add(export)
     await db_session.flush()
@@ -134,10 +134,12 @@ async def test_asset_segment_task_batch_export_repositories(db_session: AsyncSes
     assert len(tasks) == 1
     assert tasks[0].task_index == 0
 
+    assert tasks[0].segment_ids == [segment.id]
+
     batches = await AnnotationBatchRepository(db_session).list_by_job_id(job.id)
     assert len(batches) == 1
     assert batches[0].task_id == task.id
 
     stored_export = await DatasetExportRepository(db_session).get_by_job_id(job.id)
     assert stored_export is not None
-    assert stored_export.qc_report_json.startswith("{")
+    assert stored_export.qc_report_json["coverage_pct"] == 100.0

@@ -61,7 +61,7 @@ async def _seed_project(db_session: AsyncSession) -> tuple[User, Job]:
         user_id=user.id,
         correlation_id=f"corr-stream-{uuid.uuid4().hex[:8]}",
         name="SSE test project",
-        schema_json="{}",
+        schema_json={},
         status=JobStatus.PENDING.value,
     )
     db_session.add(job)

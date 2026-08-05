@@ -52,8 +52,8 @@ async def _seed_job(db_session: AsyncSession) -> Job:
     job = Job(
         user_id=user.id,
         correlation_id=f"corr-cost-cap-{suffix}",
-        topic="Cost cap enforcement",
-        depth="standard",
+        name="Cost cap enforcement",
+        schema_json={},
         status=JobStatus.RUNNING.value,
     )
     db_session.add(job)

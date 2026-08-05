@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from eventforge.api.deps import Settings, get_settings
+from eventforge.api.errors import ServiceUnavailableError
 from eventforge.core.database import check_postgres
 
 router = APIRouter()
@@ -16,9 +17,9 @@ async def health_ready(settings: Settings = Depends(get_settings)) -> dict[str, 
     try:
         await check_postgres(settings)
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={"status": "not_ready", "checks": {"postgres": str(exc)}},
+        raise ServiceUnavailableError(
+            "Service not ready",
+            extra={"status": "not_ready", "checks": {"postgres": str(exc)}},
         ) from exc
 
     return {"status": "ready", "checks": {"postgres": "ok"}}
