@@ -1,5 +1,5 @@
 # SQS workers — start all: make workers (Honcho) or make workers-overmind (Overmind)
-ingestion:  uv run --project backend python -m eventforge.workers.ingestion
+ingestion:  uv run --project backend python -m eventforge.workers.intake
 embedding:  uv run --project backend python -m eventforge.workers.embedding
 knowledge:  uv run --project backend python -m eventforge.workers.knowledge
 research:   uv run --project backend python -m eventforge.workers.research

@@ -64,6 +64,9 @@ tmp/
 # Local AWS emulation
 .localstack/
 
+# Uploaded project files (local disk storage)
+data/uploads/
+
 # Secrets
 *.pem
 credentials.json
