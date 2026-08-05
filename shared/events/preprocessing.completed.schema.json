@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eventforge.dev/schemas/preprocessing.completed.schema.json",
+  "title": "PreprocessingCompletedPayload",
+  "description": "Payload for eventforge.preprocessing.completed — text segments extracted from assets.",
+  "type": "object",
+  "required": ["segment_ids", "segment_count"],
+  "properties": {
+    "segment_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "minItems": 1,
+      "description": "Primary keys of segments rows written during preprocessing."
+    },
+    "segment_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of segments produced."
+    }
+  },
+  "additionalProperties": false
+}

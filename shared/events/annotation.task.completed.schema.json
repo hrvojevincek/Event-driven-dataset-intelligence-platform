@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eventforge.dev/schemas/annotation.task.completed.schema.json",
+  "title": "AnnotationTaskCompletedPayload",
+  "description": "Payload for eventforge.annotation.task.completed — one annotation sub-task finished.",
+  "type": "object",
+  "required": ["task_id", "batch_id", "task_index"],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Dispatch id matching annotation.task.dispatched."
+    },
+    "batch_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Primary key of the annotation_batches row written."
+    },
+    "task_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Zero-based index within the project's annotation fan-out."
+    }
+  },
+  "additionalProperties": false
+}

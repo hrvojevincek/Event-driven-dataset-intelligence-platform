@@ -316,7 +316,7 @@ Project: EventForge
 | ----- | --------------------------------- | ------- |
 | 0     | Decisions & docs                  | ✅ Done |
 | 1     | Data model (drop pgvector)        | ✅ Done |
-| 2     | Event contracts                   | ⬜      |
+| 2     | Event contracts                   | ✅ Done |
 | 3–7   | Pipeline stages (intake → export) | ⬜      |
 | 8     | Frontend (60/40 demo UX)          | ⬜      |
 | 9     | Local infra cleanup               | ⬜      |
@@ -330,6 +330,6 @@ Project: EventForge
 
 ## Current Priority
 
-**Dataset pivot Phase 2** — event contracts. See `docs/PIVOT_PLAN.md`.
+**Dataset pivot Phase 3** — Intake stage. See `docs/PIVOT_PLAN.md`.
 
 Verify: `./scripts/verify-pipeline-e2e.sh` · `./scripts/verify-dlq-redrive.sh` · run DLQ worker: `uv run --project backend python -m eventforge.workers.dlq`

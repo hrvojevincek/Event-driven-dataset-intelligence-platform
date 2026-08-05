@@ -10,12 +10,18 @@ from eventforge.core.config import Settings, get_settings
 logger = logging.getLogger(__name__)
 
 EVENT_SOURCE_API = "eventforge.api"
-EVENT_SOURCE_INGESTION = "eventforge.workers.ingestion"
-EVENT_SOURCE_EMBEDDING = "eventforge.workers.embedding"
-EVENT_SOURCE_KNOWLEDGE = "eventforge.workers.knowledge"
-EVENT_SOURCE_RESEARCH = "eventforge.workers.research"
-EVENT_SOURCE_SYNTHESIS = "eventforge.workers.synthesis"
+EVENT_SOURCE_INTAKE = "eventforge.workers.intake"
+EVENT_SOURCE_PREPROCESSING = "eventforge.workers.preprocessing"
+EVENT_SOURCE_PLANNING = "eventforge.workers.planning"
+EVENT_SOURCE_ANNOTATION = "eventforge.workers.annotation"
+EVENT_SOURCE_EXPORT = "eventforge.workers.export"
 EVENT_SOURCE_DLQ = "eventforge.workers.dlq"
+# Legacy event sources (same workers until Phases 3–7)
+EVENT_SOURCE_INGESTION = EVENT_SOURCE_INTAKE
+EVENT_SOURCE_EMBEDDING = EVENT_SOURCE_PREPROCESSING
+EVENT_SOURCE_KNOWLEDGE = EVENT_SOURCE_PLANNING
+EVENT_SOURCE_RESEARCH = EVENT_SOURCE_ANNOTATION
+EVENT_SOURCE_SYNTHESIS = EVENT_SOURCE_EXPORT
 PUBLISHER_WORKER_NAME = "api"
 
 
@@ -43,8 +49,12 @@ class EventPublisher:
             self._client = boto_client("events", self._settings)
         return self._client
 
-    async def publish_query_submitted(self, event: PublishableEvent) -> None:
+    async def publish_project_submitted(self, event: PublishableEvent) -> None:
         await self.publish(event, source=EVENT_SOURCE_API)
+
+    async def publish_query_submitted(self, event: PublishableEvent) -> None:
+        """Legacy alias — use publish_project_submitted after Phase 3."""
+        await self.publish_project_submitted(event)
 
     async def publish(self, event: PublishableEvent, *, source: str) -> None:
         await asyncio.to_thread(self._publish_sync, event, source)
