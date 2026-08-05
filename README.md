@@ -85,7 +85,7 @@ LLM_DEFAULT_MODEL=gpt-4o-mini
 JOB_MAX_COST_USD=2.0           # optional — per-job LLM spend cap (omit to disable)
 ```
 
-By default `MOCK_EXTERNAL_APIS` only affects legacy embedding fixtures (unused in the dataset pipeline). **LLM calls always use your API keys** (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`).
+LLM calls use your API keys (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`) when set.
 
 **Hybrid (hot reload):** run infra in Docker, API + frontend natively:
 

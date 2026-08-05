@@ -4,7 +4,7 @@
 
 ## What Is EventForge?
 
-**Pivoting (2026-08-04)** to an event-driven **dataset intelligence platform** — upload files + annotation schema → pipeline → labeled JSONL out. Legacy research/RAG code remains until pivot phases land.
+**Pivoting (2026-08-04)** to an event-driven **dataset intelligence platform** — upload files + annotation schema → pipeline → labeled JSONL out. See `docs/DATASET_PLATFORM.md` and `docs/PIVOT_PLAN.md` (Phases 0–8 complete).
 
 **Read first:** `docs/DATASET_PLATFORM.md` · `docs/PIVOT_PLAN.md`
 
