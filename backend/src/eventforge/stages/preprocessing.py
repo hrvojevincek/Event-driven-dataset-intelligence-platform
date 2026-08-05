@@ -1,3 +1,11 @@
+"""Preprocessing stage: turn uploaded assets into annotatable segments.
+
+Consumes ``intake.completed``, loads each asset from local storage, extracts text
+(plain/Markdown/PDF via PyMuPDF), splits into token-bounded chunks with overlap,
+persists ``Segment`` rows (idempotent per job), and publishes
+``preprocessing.completed`` with segment IDs for the planning stage.
+"""
+
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession

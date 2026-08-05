@@ -18,7 +18,7 @@ from eventforge.db.models import (
 from eventforge.db.repositories import LLMUsageRepository
 from eventforge.db.session import reset_engine
 from eventforge.events.publisher import EventPublisher
-from eventforge.events.schemas import build_embedding_completed_event
+from eventforge.events.schemas import build_preprocessing_completed_event
 from eventforge.services.resilience import (
     JobCostCapExceededError,
     assert_job_under_cost_cap,
@@ -68,7 +68,7 @@ async def test_assert_job_under_cost_cap_raises_when_at_limit(db_session: AsyncS
 
     await LLMUsageRepository(db_session).log(
         job_id=job.id,
-        agent_name="research",
+        agent_name="annotation",
         model="gpt-4o-mini",
         input_tokens=100,
         output_tokens=50,
@@ -106,11 +106,11 @@ async def test_emit_cost_cap_pipeline_failure_marks_job_failed(db_session: Async
         )
     await db_session.flush()
 
-    # Knowledge worker consumes embedding.completed; stage_mapping marks KNOWLEDGE_MINING failed.
-    event = build_embedding_completed_event(
+    # Planning worker consumes preprocessing.completed; stage_mapping marks planning failed.
+    event = build_preprocessing_completed_event(
         job_id=job.id,
         correlation_id=job.correlation_id,
-        chunk_ids=[uuid.uuid4()],
+        segment_ids=[uuid.uuid4()],
     )
     detail = event.model_dump(mode="json")
     exc = JobCostCapExceededError(
@@ -127,9 +127,9 @@ async def test_emit_cost_cap_pipeline_failure_marks_job_failed(db_session: Async
     assert refreshed is not None
     assert refreshed.status == JobStatus.FAILED.value
 
-    knowledge_stage = await JobStageRepository(db_session).get_by_job_and_stage(
+    planning_stage = await JobStageRepository(db_session).get_by_job_and_stage(
         job.id,
-        JobStageName.KNOWLEDGE_MINING.value,
+        JobStageName.PLANNING.value,
     )
-    assert knowledge_stage is not None
-    assert knowledge_stage.status == StageStatus.FAILED.value
+    assert planning_stage is not None
+    assert planning_stage.status == StageStatus.FAILED.value

@@ -1,8 +1,15 @@
-"""Annotation stage — fan-out from planning.completed and label tasks."""
+"""Annotation stage: fan out planning tasks and label segments with the LLM.
+
+Consumes ``planning.completed`` to emit one ``annotation.task.dispatched`` event per
+``AnnotationTask``, then processes each dispatch by loading segment text, calling
+the LLM with the project's label schema, persisting ``AnnotationBatch`` rows
+(idempotent per task), and publishing ``annotation.task.completed``. When every
+task finishes, publishes ``annotation.all.completed`` for export (local mode).
+"""
 
 from __future__ import annotations
 
-import uuid
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,11 +44,7 @@ from eventforge.services.planning.schema_templates import load_label_schema
 from eventforge.stages._runtime import StageRun, parse_event
 
 
-def _segment_ids_for_task(task: AnnotationTask) -> list[uuid.UUID]:
-    return task.segment_ids
-
-
-async def _build_dispatched_events(
+def _build_dispatched_events(
     event: PlanningCompletedEvent,
     tasks: list[AnnotationTask],
 ) -> list[AnnotationTaskDispatchedEvent]:
@@ -59,7 +62,7 @@ async def _build_dispatched_events(
                 task_id=task.id,
                 task_index=task.task_index,
                 instructions=task.instructions,
-                segment_ids=_segment_ids_for_task(task),
+                segment_ids=task.segment_ids,
                 event_id=deterministic_event_id(
                     event.job_id,
                     f"{DETAIL_TYPE_ANNOTATION_TASK_DISPATCHED}:{task.task_index}",
@@ -74,7 +77,7 @@ async def _load_or_create_batch(
     event: AnnotationTaskDispatchedEvent,
     *,
     llm_client: LLMClient,
-    label_schema: dict,
+    label_schema: dict[str, Any],
 ) -> AnnotationBatch:
     batch_repo = AnnotationBatchRepository(session)
     existing = await batch_repo.get_by_task_id(event.payload.task_id)
@@ -140,7 +143,7 @@ async def prepare_annotation_fanout(
         raise ValueError(msg)
 
     await run.mark_running(annotation_stage)
-    dispatched_events = await _build_dispatched_events(event, tasks)
+    dispatched_events = _build_dispatched_events(event, tasks)
     await run.commit()
     return dispatched_events
 
@@ -212,11 +215,13 @@ async def run_annotation_task(
     expected_tasks = len(await task_repo.list_by_project_id(run.job.id))
     batch_count = await batch_repo.count_by_job_id(run.job.id)
     all_completed_event: AnnotationAllCompletedEvent | None = None
+    # Last tasks may finish concurrently; duplicate all.completed publishes are safe
+    # because the event_id is deterministic and export dedupes via processed_events.
     if batch_count >= expected_tasks:
         annotation_stage = await run.require_stage(JobStageName.ANNOTATION)
         await run.mark_completed(annotation_stage)
         # Step Functions publishes annotation.all_completed after Map; local mode emits here.
-        if get_settings().research_orchestration_mode == "local":
+        if get_settings().annotation_orchestration_mode == "local":
             all_completed_event = build_annotation_all_completed_event(
                 job_id=run.job.id,
                 correlation_id=event.correlation_id,

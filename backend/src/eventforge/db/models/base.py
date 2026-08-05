@@ -30,15 +30,9 @@ class JobStageName(StrEnum):
     PLANNING = "planning"
     ANNOTATION = "annotation"
     EXPORT = "export"
-    # Legacy aliases for research pipeline code removed in Phases 3–7.
-    INGESTION = "intake"
-    EMBEDDING = "preprocessing"
-    KNOWLEDGE_MINING = "planning"
-    RESEARCH = "annotation"
-    SYNTHESIS = "export"
 
 
-# Ordered stages used when creating job_stages rows (excludes deprecated aliases).
+# Ordered stages used when creating job_stages rows.
 PIPELINE_STAGE_NAMES: tuple[JobStageName, ...] = (
     JobStageName.INTAKE,
     JobStageName.PREPROCESSING,
