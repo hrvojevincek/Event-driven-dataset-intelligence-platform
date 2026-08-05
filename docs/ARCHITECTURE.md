@@ -1,6 +1,10 @@
 # EventForge — System Architecture
 
-> **Cursor agents:** Summary in `.cursor/rules/eventforge-core.mdc` + `.cursor/rules/event-pipeline.mdc`. This doc has full Mermaid diagrams.
+> **Pivot notice (2026-08):** This document still describes the **legacy research/RAG pipeline** (queries, ingestion, pgvector, synthesis).
+>
+> **Current product (dataset intelligence platform):** read [`DATASET_PLATFORM.md`](./DATASET_PLATFORM.md) first, then [`PIVOT_PLAN.md`](./PIVOT_PLAN.md) for phase status. Phase 10 will rewrite this file to match the intake → preprocessing → planning → annotation → export flow.
+
+> **Cursor agents:** Summary in `.cursor/rules/eventforge-core.mdc` + `.cursor/rules/event-pipeline.mdc`. This doc has full Mermaid diagrams for the **legacy** architecture below.
 
 **Version:** 0.1  
 **Last updated:** 2025-06-20

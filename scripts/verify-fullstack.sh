@@ -68,7 +68,7 @@ FRONTEND_HTML="$(curl -sf "${FRONTEND_URL}/")"
 python3 -c '
 import sys
 html = sys.stdin.read()
-needles = ("EventForge", "Multi-agent research")
+needles = ("EventForge", "Dataset intelligence")
 missing = [n for n in needles if n not in html]
 if missing:
     print("Frontend HTML missing:", ", ".join(missing), file=sys.stderr)
