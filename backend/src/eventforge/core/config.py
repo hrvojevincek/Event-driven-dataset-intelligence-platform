@@ -141,7 +141,7 @@ class Settings(BaseSettings):
 
     @property
     def use_mock_external_apis(self) -> bool:
-        """Use fixture Tavily/LLM/embeddings instead of paid external APIs."""
+        """Use fixture legacy embeddings instead of paid OpenAI embedding API."""
         if self.mock_external_apis is not None:
             return self.mock_external_apis
         return self.environment == "local"

@@ -119,9 +119,4 @@ class LLMClient:
 def get_llm_client(session: AsyncSession | None = None) -> LLMClient:
     """Build an LLM client, optionally bound to a DB session for usage logging."""
     settings = get_settings()
-    if settings.use_mock_external_apis:
-        from eventforge.services.mock.llm import MockLLMClient
-
-        # type: ignore[return-value]
-        return MockLLMClient(settings, session=session)
     return LLMClient(settings=settings, session=session)

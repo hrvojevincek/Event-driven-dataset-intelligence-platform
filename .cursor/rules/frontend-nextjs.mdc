@@ -12,8 +12,8 @@ alwaysApply: false
 frontend/src/
 ├── app/                    # App Router pages
 │   ├── page.tsx            # Home
-│   ├── queries/new/        # Submit query
-│   └── queries/[id]/       # Job detail + React Flow
+│   ├── projects/new/       # Upload + schema template
+│   └── projects/[id]/      # Project detail + React Flow
 ├── components/
 │   ├── ui/                 # shadcn/ui
 │   ├── workflow/           # React Flow pipeline nodes/edges
@@ -38,10 +38,10 @@ Update nodes from SSE events keyed by `correlation_id`. Show per-stage duration 
 
 ## Key pages
 
-- `/` — landing + recent queries
-- `/queries/new` — form: topic (required), depth, max_sources
-- `/queries/[id]` — React Flow + synthesis markdown + sources + cost panel
+- `/` — landing + recent projects
+- `/projects/new` — file upload + schema template picker
+- `/projects/[id]` — React Flow + QC panel + JSONL export
 
 ## Real-time
 
-Prefer SSE over WebSocket (ADR-010). `useJobStream(jobId)` hook connects to `/api/v1/queries/{id}/stream`. No auth headers — API uses implicit mock user (ADR-013).
+Prefer SSE over WebSocket (ADR-010). `useJobStream(jobId)` hook connects to `/api/v1/projects/{id}/stream`. No auth headers — API uses implicit mock user (ADR-013).

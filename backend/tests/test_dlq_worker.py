@@ -12,7 +12,7 @@ async def test_dlq_worker_discards_poison_pill_message() -> None:
         "MessageId": "msg-poison",
     }
 
-    with patch.object(worker, "_receive_messages", return_value=[message]):
+    with patch.object(worker, "_receive_messages", return_value=([message], False)):
         processed = await worker.poll_once()
 
     assert processed == 1

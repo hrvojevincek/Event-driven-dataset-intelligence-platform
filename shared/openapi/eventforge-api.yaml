@@ -34,12 +34,12 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Health Ready Health Ready Get
-  /api/v1/queries:
+  /api/v1/projects:
     get:
       tags:
       - api
-      summary: List User Queries
-      operationId: list_user_queries_api_v1_queries_get
+      summary: List User Projects
+      operationId: list_user_projects_api_v1_projects_get
       responses:
         '200':
           description: Successful Response
@@ -47,19 +47,19 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/QuerySummaryResponse'
+                  $ref: '#/components/schemas/ProjectSummaryResponse'
                 type: array
-                title: Response List User Queries Api V1 Queries Get
+                title: Response List User Projects Api V1 Projects Get
     post:
       tags:
       - api
-      summary: Create Query
-      operationId: create_query_api_v1_queries_post
+      summary: Create Project
+      operationId: create_project_api_v1_projects_post
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SubmitQueryRequest'
+              $ref: '#/components/schemas/Body_create_project_api_v1_projects_post'
         required: true
       responses:
         '201':
@@ -67,34 +67,34 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SubmitQueryResponse'
+                $ref: '#/components/schemas/SubmitProjectResponse'
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /api/v1/queries/{job_id}:
+  /api/v1/projects/{project_id}:
     get:
       tags:
       - api
-      summary: Get Query
-      operationId: get_query_api_v1_queries__job_id__get
+      summary: Get Project
+      operationId: get_project_api_v1_projects__project_id__get
       parameters:
-      - name: job_id
+      - name: project_id
         in: path
         required: true
         schema:
           type: string
           format: uuid
-          title: Job Id
+          title: Project Id
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QueryDetailResponse'
+                $ref: '#/components/schemas/ProjectDetailResponse'
         '422':
           description: Validation Error
           content:
@@ -104,16 +104,16 @@ paths:
     delete:
       tags:
       - api
-      summary: Remove Query
-      operationId: remove_query_api_v1_queries__job_id__delete
+      summary: Remove Project
+      operationId: remove_project_api_v1_projects__project_id__delete
       parameters:
-      - name: job_id
+      - name: project_id
         in: path
         required: true
         schema:
           type: string
           format: uuid
-          title: Job Id
+          title: Project Id
       responses:
         '204':
           description: Successful Response
@@ -123,21 +123,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /api/v1/queries/{job_id}/stream:
+  /api/v1/projects/{project_id}/export:
     get:
       tags:
       - api
-      summary: Stream Query Events
-      description: Stream pipeline stage updates for a job via Server-Sent Events.
-      operationId: stream_query_events_api_v1_queries__job_id__stream_get
+      summary: Download Project Export
+      operationId: download_project_export_api_v1_projects__project_id__export_get
       parameters:
-      - name: job_id
+      - name: project_id
         in: path
         required: true
         schema:
           type: string
           format: uuid
-          title: Job Id
+          title: Project Id
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          default: jsonl
+          title: Format
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/projects/{project_id}/stream:
+    get:
+      tags:
+      - api
+      summary: Stream Project Events
+      description: Stream pipeline stage updates for a job via Server-Sent Events.
+      operationId: stream_project_events_api_v1_projects__project_id__stream_get
+      parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Project Id
       responses:
         '200':
           description: Successful Response
@@ -168,6 +201,94 @@ paths:
                 title: Response Api V1 Root Api V1  Get
 components:
   schemas:
+    AssetResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        filename:
+          type: string
+          title: Filename
+        mime_type:
+          type: string
+          title: Mime Type
+        byte_size:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Byte Size
+        fetch_status:
+          type: string
+          title: Fetch Status
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - filename
+      - mime_type
+      - byte_size
+      - fetch_status
+      - created_at
+      title: AssetResponse
+      description: Uploaded file registered during intake.
+    Body_create_project_api_v1_projects_post:
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        files:
+          items:
+            type: string
+            contentMediaType: application/octet-stream
+          type: array
+          title: Files
+        schema_template:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Schema Template
+        schema_json_override:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Schema Json Override
+        domain:
+          type: string
+          title: Domain
+          default: documents
+      type: object
+      required:
+      - name
+      - files
+      title: Body_create_project_api_v1_projects_post
+    DatasetExportSummaryResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        line_count:
+          type: integer
+          title: Line Count
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        qc_report:
+          $ref: '#/components/schemas/QCReportResponse'
+      type: object
+      required:
+      - id
+      - line_count
+      - created_at
+      - qc_report
+      title: DatasetExportSummaryResponse
+      description: Export metadata without the full JSONL payload.
     HTTPValidationError:
       properties:
         detail:
@@ -211,12 +332,8 @@ components:
       required:
       - stage
       - status
-      - started_at
-      - completed_at
-      - duration_ms
-      - error_detail
       title: JobStageResponse
-      description: One pipeline stage and its execution status.
+      description: One pipeline stage row for SSE snapshots.
     LLMUsageCallResponse:
       properties:
         id:
@@ -252,7 +369,7 @@ components:
       - cost_usd
       - created_at
       title: LLMUsageCallResponse
-      description: One logged LLM call for a job.
+      description: One logged LLM call for a project.
     LLMUsageSummaryResponse:
       properties:
         total_cost_usd:
@@ -268,16 +385,8 @@ components:
       - total_cost_usd
       - calls
       title: LLMUsageSummaryResponse
-      description: Aggregated LLM cost and per-call breakdown for a job.
-    QueryDepth:
-      type: string
-      enum:
-      - quick
-      - standard
-      - deep
-      title: QueryDepth
-      description: Research depth preset controlling source count and thoroughness.
-    QueryDetailResponse:
+      description: Aggregated LLM cost and per-call breakdown for a project.
+    ProjectDetailResponse:
       properties:
         job_id:
           type: string
@@ -286,20 +395,23 @@ components:
         correlation_id:
           type: string
           title: Correlation Id
-        topic:
+        name:
           type: string
-          title: Topic
-        depth:
+          title: Name
+        schema_template:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Schema Template
+        domain:
           type: string
-          title: Depth
+          title: Domain
         status:
           type: string
           title: Status
-        max_sources:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Max Sources
+        label_schema_json:
+          type: string
+          title: Label Schema Json
         created_at:
           type: string
           format: date-time
@@ -313,14 +425,14 @@ components:
             $ref: '#/components/schemas/JobStageResponse'
           type: array
           title: Stages
-        sources:
+        assets:
           items:
-            $ref: '#/components/schemas/SourceResponse'
+            $ref: '#/components/schemas/AssetResponse'
           type: array
-          title: Sources
-        synthesis_report:
+          title: Assets
+        dataset_export:
           anyOf:
-          - $ref: '#/components/schemas/SynthesisReportResponse'
+          - $ref: '#/components/schemas/DatasetExportSummaryResponse'
           - type: 'null'
         llm_usage:
           $ref: '#/components/schemas/LLMUsageSummaryResponse'
@@ -328,17 +440,18 @@ components:
       required:
       - job_id
       - correlation_id
-      - topic
-      - depth
+      - name
+      - schema_template
+      - domain
       - status
-      - max_sources
+      - label_schema_json
       - created_at
       - updated_at
       - stages
       - llm_usage
-      title: QueryDetailResponse
-      description: Full job detail including stages and optional synthesis report.
-    QuerySummaryResponse:
+      title: ProjectDetailResponse
+      description: Full project detail including stages, assets, and optional export.
+    ProjectSummaryResponse:
       properties:
         job_id:
           type: string
@@ -347,20 +460,23 @@ components:
         correlation_id:
           type: string
           title: Correlation Id
-        topic:
+        name:
           type: string
-          title: Topic
-        depth:
+          title: Name
+        schema_template:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Schema Template
+        domain:
           type: string
-          title: Depth
+          title: Domain
         status:
           type: string
           title: Status
-        max_sources:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Max Sources
+        asset_count:
+          type: integer
+          title: Asset Count
         created_at:
           type: string
           format: date-time
@@ -373,64 +489,58 @@ components:
       required:
       - job_id
       - correlation_id
-      - topic
-      - depth
+      - name
+      - schema_template
+      - domain
       - status
-      - max_sources
+      - asset_count
       - created_at
       - updated_at
-      title: QuerySummaryResponse
-      description: Lightweight job summary for list endpoints.
-    SourceResponse:
+      title: ProjectSummaryResponse
+      description: Lightweight project summary for list endpoints.
+    QCReportResponse:
       properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        url:
-          type: string
-          title: Url
-        title:
-          type: string
-          title: Title
-        snippet:
-          type: string
-          title: Snippet
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
+        coverage_pct:
+          type: number
+          title: Coverage Pct
+        schema_compliance_pct:
+          type: number
+          title: Schema Compliance Pct
+        low_confidence_segment_ids:
+          items:
+            type: string
+          type: array
+          title: Low Confidence Segment Ids
+        total_cost_usd:
+          type: number
+          title: Total Cost Usd
+        segment_count:
+          type: integer
+          title: Segment Count
+        labeled_count:
+          type: integer
+          title: Labeled Count
+        batch_count:
+          type: integer
+          title: Batch Count
+        flags:
+          items:
+            type: string
+          type: array
+          title: Flags
       type: object
       required:
-      - id
-      - url
-      - title
-      - snippet
-      - created_at
-      title: SourceResponse
-      description: Web source discovered during ingestion.
-    SubmitQueryRequest:
-      properties:
-        topic:
-          type: string
-          minLength: 1
-          title: Topic
-        depth:
-          $ref: '#/components/schemas/QueryDepth'
-          default: standard
-        max_sources:
-          anyOf:
-          - type: integer
-            maximum: 100.0
-            minimum: 1.0
-          - type: 'null'
-          title: Max Sources
-      type: object
-      required:
-      - topic
-      title: SubmitQueryRequest
-      description: HTTP body for POST /api/v1/queries.
-    SubmitQueryResponse:
+      - coverage_pct
+      - schema_compliance_pct
+      - low_confidence_segment_ids
+      - total_cost_usd
+      - segment_count
+      - labeled_count
+      - batch_count
+      - flags
+      title: QCReportResponse
+      description: Quality-control summary for a completed export.
+    SubmitProjectResponse:
       properties:
         job_id:
           type: string
@@ -439,32 +549,17 @@ components:
         correlation_id:
           type: string
           title: Correlation Id
+        asset_count:
+          type: integer
+          minimum: 1.0
+          title: Asset Count
       type: object
       required:
       - job_id
       - correlation_id
-      title: SubmitQueryResponse
-      description: HTTP response after a query is accepted into the pipeline.
-    SynthesisReportResponse:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        content:
-          type: string
-          title: Content
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-      type: object
-      required:
-      - id
-      - content
-      - created_at
-      title: SynthesisReportResponse
-      description: Final report produced by the synthesis stage.
+      - asset_count
+      title: SubmitProjectResponse
+      description: Response after a project is accepted and queued for intake.
     ValidationError:
       properties:
         loc:

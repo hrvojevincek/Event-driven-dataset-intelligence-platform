@@ -1,9 +1,9 @@
 "use client";
 
-import type { QueryDetail } from "@/lib/api-client";
+import type { ProjectDetail } from "@/lib/api-client";
 
 type CostPanelProps = {
-  detail: QueryDetail | undefined;
+  detail: ProjectDetail | undefined;
   isLoading: boolean;
 };
 
@@ -20,7 +20,7 @@ function formatUsd(value: number | undefined, hasUsage: boolean): string {
   return "$0.0000";
 }
 
-function formatTokens(calls: QueryDetail["llm_usage"]["calls"]): string {
+function formatTokens(calls: ProjectDetail["llm_usage"]["calls"]): string {
   if (calls.length === 0) {
     return "—";
   }

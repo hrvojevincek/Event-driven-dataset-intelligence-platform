@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import { mainNav, secondaryNav } from "@/lib/nav";
-import { Separator } from "@/components/ui/separator";
+import { mainNav } from "@/lib/nav";
 
 type SiteSidebarProps = {
   className?: string;
@@ -60,32 +59,6 @@ export function SiteSidebar({ className, onNavigate }: SiteSidebarProps) {
           );
         })}
 
-        <Separator className="my-2 bg-sidebar-border" />
-
-        <p className="px-2 pb-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          Resources
-        </p>
-        {secondaryNav.map(({ href, label, icon: Icon }) => {
-          const active =
-            pathname === href || pathname.startsWith(`${href}/`);
-
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-              )}
-            >
-              <Icon className="size-4 shrink-0 opacity-80" />
-              {label}
-            </Link>
-          );
-        })}
       </nav>
 
       <div className="border-t border-sidebar-border p-4">
@@ -93,7 +66,7 @@ export function SiteSidebar({ className, onNavigate }: SiteSidebarProps) {
           Pipeline
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Ingestion → Embedding → Knowledge → Research → Synthesis
+          Intake → Preprocessing → Planning → Annotation → Export
         </p>
       </div>
     </aside>

@@ -193,3 +193,117 @@ async def test_download_project_export_returns_jsonl(
 async def test_download_project_export_not_found(client: AsyncClient) -> None:
     response = await client.get(f"/api/v1/projects/{uuid.uuid4()}/export")
     assert response.status_code == 404
+
+
+async def test_list_projects_returns_user_jobs(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    from eventforge.db.models import JobStatus
+    from eventforge.db.repositories import UserRepository
+
+    user = await UserRepository(db_session).get_or_create_mock_user()
+
+    job = Job(
+        user_id=user.id,
+        correlation_id="corr-list-projects",
+        name="Listed project",
+        schema_template="support_call",
+        schema_json='{"type":"object","properties":{}}',
+        status=JobStatus.PENDING.value,
+    )
+    db_session.add(job)
+    await db_session.flush()
+    db_session.add(
+        Asset(
+            job_id=job.id,
+            filename="note.txt",
+            mime_type="text/plain",
+            storage_uri="file:///tmp/note.txt",
+            fetch_status="pending",
+        )
+    )
+    await db_session.flush()
+
+    response = await client.get("/api/v1/projects")
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) >= 1
+    match = next(item for item in body if item["job_id"] == str(job.id))
+    assert match["name"] == "Listed project"
+    assert match["asset_count"] == 1
+
+
+async def test_get_project_detail_returns_stages_and_assets(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    from eventforge.db.models import JobStatus
+    from eventforge.db.repositories import UserRepository
+
+    user = await UserRepository(db_session).get_or_create_mock_user()
+
+    job = Job(
+        user_id=user.id,
+        correlation_id="corr-detail-project",
+        name="Detail project",
+        schema_template="support_call",
+        schema_json='{"type":"object","properties":{"topic":{"type":"string"}}}',
+        status=JobStatus.RUNNING.value,
+    )
+    db_session.add(job)
+    await db_session.flush()
+    for stage_name in PIPELINE_STAGE_NAMES:
+        db_session.add(
+            JobStage(
+                job_id=job.id,
+                stage=stage_name.value,
+                status="pending",
+            )
+        )
+    db_session.add(
+        Asset(
+            job_id=job.id,
+            filename="call.txt",
+            mime_type="text/plain",
+            storage_uri="file:///tmp/call.txt",
+            byte_size=12,
+            fetch_status="ok",
+        )
+    )
+    await db_session.flush()
+
+    response = await client.get(f"/api/v1/projects/{job.id}")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["name"] == "Detail project"
+    assert len(body["stages"]) == len(PIPELINE_STAGE_NAMES)
+    assert len(body["assets"]) == 1
+    assert body["assets"][0]["filename"] == "call.txt"
+
+
+async def test_delete_project_removes_job(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    from eventforge.db.models import JobStatus
+    from eventforge.db.repositories import UserRepository
+
+    user = await UserRepository(db_session).get_or_create_mock_user()
+
+    job = Job(
+        user_id=user.id,
+        correlation_id="corr-delete-project",
+        name="Delete me",
+        schema_template="support_call",
+        schema_json='{"type":"object","properties":{}}',
+        status=JobStatus.PENDING.value,
+    )
+    db_session.add(job)
+    await db_session.flush()
+
+    response = await client.delete(f"/api/v1/projects/{job.id}")
+    assert response.status_code == 204
+
+    detail = await client.get(f"/api/v1/projects/{job.id}")
+    assert detail.status_code == 404
