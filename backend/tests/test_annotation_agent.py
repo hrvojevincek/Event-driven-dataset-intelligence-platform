@@ -35,7 +35,7 @@ from eventforge.services.intake.templates import SUPPORT_CALL_TEMPLATE
 from eventforge.services.llm.client import LLMClient
 from eventforge.services.llm.types import LLMCompletionResult
 from eventforge.services.planning import build_annotation_tasks
-from eventforge.services.planning.task_builder import annotation_tasks_from_planned
+from eventforge.services.planning.task_builder import persist_planned_tasks
 from eventforge.stages.annotation import (
     parse_annotation_task_dispatched_event,
     parse_planning_completed_event,
@@ -108,9 +108,7 @@ async def _seed_project_with_tasks(
     await db_session.flush()
 
     planned = build_annotation_tasks(job, segments)
-    tasks = annotation_tasks_from_planned(job.id, planned)
-    db_session.add_all(tasks)
-    await db_session.flush()
+    tasks = await persist_planned_tasks(db_session, job.id, planned)
     return job, stage, tasks, segments
 
 

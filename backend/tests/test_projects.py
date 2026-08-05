@@ -110,7 +110,7 @@ async def test_create_project_rejects_unsupported_extension(client: AsyncClient)
         files=[("files", ("virus.exe", b"bad", "application/octet-stream"))],
     )
     assert response.status_code == 422
-    assert "Unsupported file type" in response.json()["detail"]["message"]
+    assert "Unsupported file type" in response.json()["message"]
 
 
 async def test_create_project_requires_schema(client: AsyncClient) -> None:
@@ -120,7 +120,7 @@ async def test_create_project_requires_schema(client: AsyncClient) -> None:
         files=[("files", ("note.txt", b"hello", "text/plain"))],
     )
     assert response.status_code == 422
-    assert "schema_template or schema_json" in response.json()["detail"]["message"]
+    assert "schema_template or schema_json" in response.json()["message"]
 
 
 async def test_create_project_publisher_claim_record(
