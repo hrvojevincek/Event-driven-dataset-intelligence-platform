@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from eventforge.core.otel import traced_agent
 from eventforge.db.models import (
+    AnnotationTask,
     Job,
     JobStageName,
     JobStatus,
@@ -37,9 +38,14 @@ from eventforge.events.schemas.constants import (
     DETAIL_TYPE_RESEARCH_ALL_COMPLETED,
     DETAIL_TYPE_RESEARCH_TASK_COMPLETED,
 )
-from eventforge.services.knowledge import expected_research_task_count
 from eventforge.services.llm.client import LLMClient, get_llm_client
 from eventforge.services.synthesis import generate_synthesis_report
+
+
+def _expected_research_task_count(entities: list[AnnotationTask]) -> int:
+    """Legacy research gate — count non-topic entities that each needed a note."""
+    concepts = [entity for entity in entities if entity.entity_type != "topic"]
+    return len(concepts if concepts else list(entities))
 
 
 async def _load_or_create_report(
@@ -88,7 +94,7 @@ async def _run_synthesis(
         raise ValueError(msg)
 
     entities = await entity_repo.list_by_job_id(job.id)
-    expected_tasks = expected_research_task_count(entities)
+    expected_tasks = _expected_research_task_count(entities)
     note_count = await note_repo.count_by_job_id(job.id)
     if expected_tasks == 0 or note_count < expected_tasks:
         await processed_repo.release_claim(
@@ -174,7 +180,7 @@ async def process_research_task_completed(
         raise ValueError(msg)
 
     entities = await entity_repo.list_by_job_id(job.id)
-    expected_tasks = expected_research_task_count(entities)
+    expected_tasks = _expected_research_task_count(entities)
     note_count = await note_repo.count_by_job_id(job.id)
     if expected_tasks == 0 or note_count < expected_tasks:
         await processed_repo.release_claim(event_id, WORKER_NAME_SYNTHESIS)

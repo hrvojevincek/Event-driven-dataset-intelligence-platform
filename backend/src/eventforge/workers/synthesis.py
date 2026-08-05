@@ -11,7 +11,11 @@ from eventforge.core.config import get_settings
 from eventforge.db.session import get_session_factory
 from eventforge.events.parser import parse_eventbridge_sqs_body
 from eventforge.events.publisher import EventPublisher
-from eventforge.events.schemas.constants import DETAIL_TYPE_RESEARCH_ALL_COMPLETED
+from eventforge.events.schemas.constants import (
+    DETAIL_TYPE_ANNOTATION_ALL_COMPLETED,
+    DETAIL_TYPE_ANNOTATION_TASK_COMPLETED,
+    DETAIL_TYPE_RESEARCH_ALL_COMPLETED,
+)
 from eventforge.workers.base import SqsConsumer
 from eventforge.workers.bootstrap import main
 from eventforge.workers.cost_cap import run_with_cost_cap_handling
@@ -32,6 +36,21 @@ class SynthesisWorker(SqsConsumer):
     async def handle_message(self, message: dict[str, Any]) -> None:
         detail = parse_eventbridge_sqs_body(message["Body"])
         detail_type = detail.get("detail_type")
+
+        # Phase 6 emits annotation.* onto this queue; export lands in Phase 7.
+        if detail_type in (
+            DETAIL_TYPE_ANNOTATION_TASK_COMPLETED,
+            DETAIL_TYPE_ANNOTATION_ALL_COMPLETED,
+        ):
+            logger.info(
+                "Skipping annotation completion; export worker lands in Phase 7",
+                extra={
+                    "event_id": detail.get("event_id"),
+                    "job_id": detail.get("job_id"),
+                    "detail_type": detail_type,
+                },
+            )
+            return
 
         if detail_type == DETAIL_TYPE_RESEARCH_ALL_COMPLETED:
             await self._handle_research_all_completed(detail)

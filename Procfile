@@ -2,6 +2,6 @@
 ingestion: uv run --project backend python -m eventforge.workers.intake
 embedding: uv run --project backend python -m eventforge.workers.preprocessing
 knowledge: uv run --project backend python -m eventforge.workers.planning
-research: uv run --project backend python -m eventforge.workers.research
+research: uv run --project backend python -m eventforge.workers.annotation
 synthesis: uv run --project backend python -m eventforge.workers.synthesis
 dlq: uv run --project backend python -m eventforge.workers.dlq

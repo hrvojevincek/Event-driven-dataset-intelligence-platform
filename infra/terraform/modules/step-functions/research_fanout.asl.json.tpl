@@ -1,5 +1,5 @@
 {
-  "Comment": "EventForge research fan-out: prepare tasks, Map dispatch with task tokens, publish all completed.",
+  "Comment": "EventForge annotation fan-out: prepare tasks, Map dispatch with task tokens, publish all completed.",
   "StartAt": "PrepareFanout",
   "States": {
     "PrepareFanout": {
@@ -20,14 +20,14 @@
           "ContainerOverrides": [
             {
               "Name": "worker",
-              "Command": ["eventforge.cli.research_fanout"],
+              "Command": ["eventforge.cli.annotation_fanout"],
               "Environment": [
                 {
                   "Name": "STEP_FUNCTIONS_TASK_TOKEN",
                   "Value.$": "$$.Task.Token"
                 },
                 {
-                  "Name": "KNOWLEDGE_MINED_EVENT",
+                  "Name": "PLANNING_COMPLETED_EVENT",
                   "Value.$": "States.JsonToString($.detail)"
                 }
               ]
@@ -63,9 +63,9 @@
       "ResultPath": "$.fanoutResults",
       "MaxConcurrency": 10,
       "Iterator": {
-        "StartAt": "DispatchResearchTask",
+        "StartAt": "DispatchAnnotationTask",
         "States": {
-          "DispatchResearchTask": {
+          "DispatchAnnotationTask": {
             "Type": "Task",
             "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
             "Parameters": {
@@ -89,7 +89,7 @@
         "job_id.$": "$.fanout.job_id",
         "timestamp.$": "$$.State.EnteredTime",
         "schema_version": "1.0",
-        "detail_type": "eventforge.research.all_completed",
+        "detail_type": "eventforge.annotation.all_completed",
         "payload": {
           "task_count.$": "States.ArrayLength($.fanout.tasks)"
         }
@@ -104,7 +104,7 @@
         "Entries": [
           {
             "Source": "eventforge.step-functions",
-            "DetailType": "eventforge.research.all_completed",
+            "DetailType": "eventforge.annotation.all_completed",
             "EventBusName": "${event_bus_name}",
             "Detail.$": "States.JsonToString($.completionDetail)"
           }
