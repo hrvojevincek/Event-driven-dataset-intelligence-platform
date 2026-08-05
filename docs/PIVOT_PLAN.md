@@ -47,7 +47,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 | 3     | Intake stage        | ✅ Done        |
 | 4     | Preprocessing stage | ✅ Done        |
 | 5     | Planning stage      | ✅ Done        |
-| 6     | Annotation stage    | ⬜ Not started |
+| 6     | Annotation stage    | ✅ Done        |
 | 7     | Export stage        | ⬜ Not started |
 | 8     | Frontend pivot      | ⬜ Not started |
 | 9     | Local infra cleanup | ⬜ Not started |
@@ -55,7 +55,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 
 **Legend:** ⬜ Not started · 🟡 In progress · ✅ Done
 
-**Next:** Phase 6 — Annotation stage
+**Next:** Phase 7 — Export stage
 
 ---
 
@@ -191,16 +191,16 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 ---
 
-## Phase 6 — Annotation stage
+## Phase 6 — Annotation stage ✅
 
 **Replaces:** `agents/research.py`, RAG, Tavily follow-up
 
 **v1:** Step Functions Map for annotation fan-out; fallback to sequential in local dev per LocalStack limits.
 
-- [ ] `services/annotation/labeler.py` — LLM labels segment batch; JSON schema validation; confidence flag
-- [ ] `agents/annotation.py` + `workers/annotation.py`
-- [ ] Update Step Functions ASL template (annotation naming) — local init script only
-- [ ] Delete `services/research/`, Tavily research usage
+- [x] `services/annotation/labeler.py` — LLM labels segment batch; JSON schema validation; confidence flag
+- [x] `agents/annotation.py` + `workers/annotation.py`
+- [x] Update Step Functions ASL template (annotation naming) — local init script only
+- [x] Delete `services/research/`, Tavily research usage
 
 **Exit:** Parallel annotation tasks → `AnnotationBatch` rows with valid `labels_json`.
 

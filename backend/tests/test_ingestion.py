@@ -25,7 +25,7 @@ from eventforge.events.schemas import (
 )
 from eventforge.services.search import DEFAULT_SOURCE_COUNT_BY_DEPTH, TavilyClient
 from eventforge.services.search.types import WebSearchResult
-from eventforge.workers.ingestion import IngestionWorker
+from eventforge.workers.intake import IntakeWorker
 
 settings = get_settings()
 
@@ -273,7 +273,7 @@ async def test_process_query_submitted_uses_default_source_count(db_session: Asy
 
 
 async def test_ingestion_worker_deletes_message_on_success() -> None:
-    worker = IngestionWorker()
+    worker = IntakeWorker()
     worker._delete_message = MagicMock()
     mock_client = MagicMock()
 

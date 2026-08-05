@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from eventforge.agents.synthesis import (
+    _expected_research_task_count,
     parse_research_task_completed_event,
     process_research_task_completed,
 )
@@ -34,7 +35,6 @@ from eventforge.events.schemas import (
     WORKER_NAME_SYNTHESIS,
     build_research_task_completed_event,
 )
-from eventforge.services.knowledge import expected_research_task_count
 from eventforge.services.llm.client import LLMClient
 from eventforge.services.llm.types import LLMCompletionResult
 from eventforge.workers.synthesis import SynthesisWorker
@@ -142,7 +142,7 @@ async def _seed_job_with_notes(
     resolved_note_count = (note_count
                            if note_count is
                            not None else
-                           expected_research_task_count(entities))
+                           _expected_research_task_count(entities))
     notes = [
         ResearchNote(
             job_id=job.id,
@@ -327,7 +327,7 @@ def test_parse_eventbridge_sqs_body_extracts_research_task_completed_detail() ->
         {
             "version": "0",
             "detail-type": "eventforge.research.task.completed",
-            "source": "eventforge.workers.research",
+            "source": "eventforge.workers.annotation",
             "detail": json.loads(event.model_dump_json()),
         }
     )

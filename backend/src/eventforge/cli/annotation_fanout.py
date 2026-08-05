@@ -1,4 +1,4 @@
-"""One-shot ECS task entrypoint for the Step Functions research fan-out prepare step."""
+"""One-shot ECS task entrypoint for the Step Functions annotation fan-out prepare step."""
 
 import asyncio
 import json
@@ -7,7 +7,7 @@ import os
 import sys
 from typing import Any
 
-from eventforge.agents.research import parse_knowledge_mined_event, prepare_research_fanout
+from eventforge.agents.annotation import parse_planning_completed_event, prepare_annotation_fanout
 from eventforge.core.config import get_settings
 from eventforge.db.session import get_session_factory
 from eventforge.services.step_functions import send_task_failure, send_task_success
@@ -21,18 +21,18 @@ async def _run_prepare() -> dict[str, Any]:
         msg = "STEP_FUNCTIONS_TASK_TOKEN is required"
         raise ValueError(msg)
 
-    event_json = os.environ.get("KNOWLEDGE_MINED_EVENT", "").strip()
+    event_json = os.environ.get("PLANNING_COMPLETED_EVENT", "").strip()
     if not event_json:
-        msg = "KNOWLEDGE_MINED_EVENT is required"
+        msg = "PLANNING_COMPLETED_EVENT is required"
         raise ValueError(msg)
 
     detail = json.loads(event_json)
-    event = parse_knowledge_mined_event(detail)
+    event = parse_planning_completed_event(detail)
     settings = get_settings()
     session_factory = get_session_factory(settings)
 
     async with session_factory() as session:
-        result = await prepare_research_fanout(session, event)
+        result = await prepare_annotation_fanout(session, event)
 
     if result is None:
         output = {
@@ -59,7 +59,7 @@ def main() -> None:
     try:
         output = asyncio.run(_run_prepare())
         logger.info(
-            "Research fan-out prepared for Step Functions",
+            "Annotation fan-out prepared for Step Functions",
             extra={
                 "job_id": output["job_id"],
                 "task_count": len(output["tasks"]),
@@ -67,7 +67,7 @@ def main() -> None:
             },
         )
     except Exception as exc:
-        logger.exception("Research fan-out prepare step failed")
+        logger.exception("Annotation fan-out prepare step failed")
         if task_token:
             send_task_failure(task_token, error=type(exc).__name__, cause=str(exc))
         sys.exit(1)

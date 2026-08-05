@@ -11,8 +11,8 @@ def parse_eventbridge_sqs_body(body: str) -> dict[str, Any]:
     return detail
 
 
-def parse_research_queue_message(body: str) -> tuple[dict[str, Any], str | None]:
-    """Parse research queue payloads from EventBridge or Step Functions task tokens."""
+def parse_annotation_queue_message(body: str) -> tuple[dict[str, Any], str | None]:
+    """Parse annotation queue payloads from EventBridge or Step Functions task tokens."""
     wrapper = json.loads(body)
     if "TaskToken" in wrapper:
         detail = wrapper.get("detail", wrapper.get("event"))
