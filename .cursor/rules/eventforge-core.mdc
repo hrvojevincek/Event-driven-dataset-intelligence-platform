@@ -27,7 +27,7 @@ Event-driven dataset intelligence platform (target). Users upload assets + schem
 ## Layout
 
 - `frontend/` — Next.js
-- `backend/src/eventforge/` — api, agents, workers, events, db, core, services
+- `backend/src/eventforge/` — api, stages, workers, events, db, core, services
 - `shared/events/` — JSON Schema contracts (define here first)
 - `docs/` — PRD, ARCHITECTURE, TECH_DECISIONS, TASKS, LOCAL_DEV
 

@@ -1,4 +1,4 @@
-"""Annotation stage agent — fan-out from planning.completed and label tasks."""
+"""Annotation stage — fan-out from planning.completed and label tasks."""
 
 from __future__ import annotations
 
@@ -7,22 +7,15 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from eventforge.core.config import get_settings
-from eventforge.core.otel import traced_agent
+from eventforge.core.otel import traced_stage
 from eventforge.db.models import AnnotationBatch, AnnotationTask, JobStageName
 from eventforge.db.repositories import (
     AnnotationBatchRepository,
     AnnotationTaskRepository,
-    ProcessedEventRepository,
-    ProjectRepository,
     SegmentRepository,
 )
-from eventforge.db.repositories.job import JobStageRepository
 from eventforge.events.deterministic import deterministic_event_id
-from eventforge.events.publisher import (
-    EVENT_SOURCE_ANNOTATION,
-    EventPublisher,
-    EventPublishError,
-)
+from eventforge.events.publisher import EVENT_SOURCE_ANNOTATION, EventPublisher
 from eventforge.events.schemas import (
     DETAIL_TYPE_ANNOTATION_ALL_COMPLETED,
     DETAIL_TYPE_ANNOTATION_TASK_COMPLETED,
@@ -40,6 +33,7 @@ from eventforge.events.schemas import (
 )
 from eventforge.services.annotation import decode_task_payload, label_segments
 from eventforge.services.llm.client import LLMClient, get_llm_client
+from eventforge.stages._runtime import StageRun, parse_event
 
 
 def _segment_ids_for_task(task: AnnotationTask) -> list[uuid.UUID]:
@@ -125,72 +119,55 @@ async def _load_or_create_batch(
     return batch
 
 
-@traced_agent(WORKER_NAME_ANNOTATION_ORCHESTRATOR)
+@traced_stage(WORKER_NAME_ANNOTATION_ORCHESTRATOR)
 async def prepare_annotation_fanout(
     session: AsyncSession,
     event: PlanningCompletedEvent,
 ) -> list[AnnotationTaskDispatchedEvent] | None:
     """Build annotation sub-tasks from planning.completed without publishing events."""
-    processed_repo = ProcessedEventRepository(session)
-    event_id = str(event.event_id)
-
-    if not await processed_repo.try_claim(event_id, WORKER_NAME_ANNOTATION_ORCHESTRATOR):
+    run = await StageRun.begin(
+        session,
+        None,
+        event,
+        worker_name=WORKER_NAME_ANNOTATION_ORCHESTRATOR,
+    )
+    if run is None:
         return None
 
-    project_repo = ProjectRepository(session)
-    stage_repo = JobStageRepository(session)
-    task_repo = AnnotationTaskRepository(session)
-
-    project = await project_repo.get_by_id(event.job_id)
-    if project is None:
-        msg = f"Project not found for annotation fan-out: {event.job_id}"
-        raise ValueError(msg)
-
-    annotation_stage = await stage_repo.get_by_job_and_stage(
-        project.id,
-        JobStageName.ANNOTATION.value,
-    )
-    if annotation_stage is None:
-        msg = f"Annotation stage missing for project: {project.id}"
-        raise ValueError(msg)
-
-    tasks = await task_repo.list_by_ids(event.payload.task_ids)
+    annotation_stage = await run.require_stage(JobStageName.ANNOTATION)
+    tasks = await AnnotationTaskRepository(session).list_by_ids(event.payload.task_ids)
     if len(tasks) != len(event.payload.task_ids):
         msg = f"Annotation tasks missing for project: {event.job_id}"
         raise ValueError(msg)
 
-    await stage_repo.mark_running(annotation_stage)
+    await run.mark_running(annotation_stage)
     dispatched_events = await _build_dispatched_events(event, tasks)
-    await session.commit()
+    await run.commit()
     return dispatched_events
 
 
-@traced_agent(WORKER_NAME_ANNOTATION_ORCHESTRATOR)
+@traced_stage(WORKER_NAME_ANNOTATION_ORCHESTRATOR)
 async def process_planning_completed(
     session: AsyncSession,
     publisher: EventPublisher,
     event: PlanningCompletedEvent,
 ) -> list[AnnotationTaskDispatchedEvent] | None:
     """Fan out annotation sub-tasks from planning.completed. Returns None if already processed."""
-    processed_repo = ProcessedEventRepository(session)
-    event_id = str(event.event_id)
-
     dispatched_events = await prepare_annotation_fanout(session, event)
     if dispatched_events is None:
         return None
 
-    try:
-        for dispatched in dispatched_events:
-            await publisher.publish(dispatched, source=EVENT_SOURCE_ANNOTATION)
-    except EventPublishError:
-        await processed_repo.release_claim(event_id, WORKER_NAME_ANNOTATION_ORCHESTRATOR)
-        await session.commit()
-        raise
-
+    run = await StageRun.wrap_claimed(
+        session,
+        publisher,
+        event,
+        worker_name=WORKER_NAME_ANNOTATION_ORCHESTRATOR,
+    )
+    await run.publish_many(dispatched_events, source=EVENT_SOURCE_ANNOTATION)
     return dispatched_events
 
 
-@traced_agent(WORKER_NAME_ANNOTATION)
+@traced_stage(WORKER_NAME_ANNOTATION)
 async def process_annotation_task_dispatched(
     session: AsyncSession,
     publisher: EventPublisher,
@@ -200,69 +177,56 @@ async def process_annotation_task_dispatched(
     step_functions_task_token: str | None = None,
 ) -> AnnotationTaskCompletedEvent | None:
     """Run one annotation sub-task. Returns None if already processed."""
-    processed_repo = ProcessedEventRepository(session)
-    event_id = str(event.event_id)
-
-    if not await processed_repo.try_claim(event_id, WORKER_NAME_ANNOTATION):
+    run = await StageRun.begin(
+        session,
+        publisher,
+        event,
+        worker_name=WORKER_NAME_ANNOTATION,
+    )
+    if run is None:
         return None
 
-    project_repo = ProjectRepository(session)
-    stage_repo = JobStageRepository(session)
-    task_repo = AnnotationTaskRepository(session)
-    batch_repo = AnnotationBatchRepository(session)
+    await run.require_stage(JobStageName.ANNOTATION)
     llm_client = llm_client or get_llm_client(session=session)
-
-    project = await project_repo.get_by_id(event.job_id)
-    if project is None:
-        msg = f"Project not found for annotation task: {event.job_id}"
-        raise ValueError(msg)
-
-    annotation_stage = await stage_repo.get_by_job_and_stage(
-        project.id,
-        JobStageName.ANNOTATION.value,
-    )
-    if annotation_stage is None:
-        msg = f"Annotation stage missing for project: {project.id}"
-        raise ValueError(msg)
-
     batch = await _load_or_create_batch(session, event, llm_client=llm_client)
 
     completed_event = build_annotation_task_completed_event(
-        job_id=project.id,
+        job_id=run.project.id,
         correlation_id=event.correlation_id,
         task_id=event.payload.task_id,
         batch_id=batch.id,
         task_index=event.payload.task_index,
         event_id=deterministic_event_id(
-            project.id,
+            run.project.id,
             f"{DETAIL_TYPE_ANNOTATION_TASK_COMPLETED}:{event.payload.task_index}",
         ),
     )
 
-    expected_tasks = len(await task_repo.list_by_project_id(project.id))
-    batch_count = await batch_repo.count_by_job_id(project.id)
+    task_repo = AnnotationTaskRepository(session)
+    batch_repo = AnnotationBatchRepository(session)
+    expected_tasks = len(await task_repo.list_by_project_id(run.project.id))
+    batch_count = await batch_repo.count_by_job_id(run.project.id)
     all_completed_event: AnnotationAllCompletedEvent | None = None
     if batch_count >= expected_tasks:
-        await stage_repo.mark_completed(annotation_stage)
+        annotation_stage = await run.require_stage(JobStageName.ANNOTATION)
+        await run.mark_completed(annotation_stage)
         # Step Functions publishes annotation.all_completed after Map; local mode emits here.
         if get_settings().research_orchestration_mode == "local":
             all_completed_event = build_annotation_all_completed_event(
-                job_id=project.id,
+                job_id=run.project.id,
                 correlation_id=event.correlation_id,
                 task_count=expected_tasks,
-                event_id=deterministic_event_id(project.id, DETAIL_TYPE_ANNOTATION_ALL_COMPLETED),
+                event_id=deterministic_event_id(
+                    run.project.id,
+                    DETAIL_TYPE_ANNOTATION_ALL_COMPLETED,
+                ),
             )
 
-    await session.commit()
+    await run.commit()
 
-    try:
-        await publisher.publish(completed_event, source=EVENT_SOURCE_ANNOTATION)
-        if all_completed_event is not None:
-            await publisher.publish(all_completed_event, source=EVENT_SOURCE_ANNOTATION)
-    except EventPublishError:
-        await processed_repo.release_claim(event_id, WORKER_NAME_ANNOTATION)
-        await session.commit()
-        raise
+    await run.publish(completed_event, source=EVENT_SOURCE_ANNOTATION)
+    if all_completed_event is not None:
+        await run.publish(all_completed_event, source=EVENT_SOURCE_ANNOTATION)
 
     if step_functions_task_token:
         from eventforge.services.step_functions import send_task_success
@@ -276,16 +240,14 @@ async def process_annotation_task_dispatched(
 
 
 def parse_planning_completed_event(detail: dict) -> PlanningCompletedEvent:
-    if detail.get("detail_type") != DETAIL_TYPE_PLANNING_COMPLETED:
-        msg = f"Unexpected detail_type: {detail.get('detail_type')}"
-        raise ValueError(msg)
-    return PlanningCompletedEvent.model_validate(detail)
+    return parse_event(detail, DETAIL_TYPE_PLANNING_COMPLETED, PlanningCompletedEvent)
 
 
 def parse_annotation_task_dispatched_event(
     detail: dict,
 ) -> AnnotationTaskDispatchedEvent:
-    if detail.get("detail_type") != DETAIL_TYPE_ANNOTATION_TASK_DISPATCHED:
-        msg = f"Unexpected detail_type: {detail.get('detail_type')}"
-        raise ValueError(msg)
-    return AnnotationTaskDispatchedEvent.model_validate(detail)
+    return parse_event(
+        detail,
+        DETAIL_TYPE_ANNOTATION_TASK_DISPATCHED,
+        AnnotationTaskDispatchedEvent,
+    )

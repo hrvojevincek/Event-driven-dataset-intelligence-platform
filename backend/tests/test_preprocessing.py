@@ -8,7 +8,6 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from eventforge.agents.preprocessing import parse_intake_completed_event, process_intake_completed
 from eventforge.core.config import Settings, get_settings
 from eventforge.db.models import (
     Asset,
@@ -30,6 +29,7 @@ from eventforge.events.schemas import (
     build_preprocessing_completed_event,
 )
 from eventforge.services.storage.local import LocalStorage
+from eventforge.stages.preprocessing import parse_intake_completed_event, process_intake_completed
 from eventforge.workers.preprocessing import PreprocessingWorker
 
 settings = get_settings()

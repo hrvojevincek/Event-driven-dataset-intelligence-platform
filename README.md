@@ -168,7 +168,7 @@ OpenAPI docs: http://localhost:8000/docs · regenerate frontend types: `make ope
 ```
 event-driven/
 ├── backend/src/eventforge/
-│   ├── agents/               # intake, preprocessing, planning, annotation, export
+│   ├── stages/               # intake, preprocessing, planning, annotation, export
 │   ├── workers/              # SQS consumers per stage
 │   ├── services/
 │   │   ├── storage/          # local file uploads

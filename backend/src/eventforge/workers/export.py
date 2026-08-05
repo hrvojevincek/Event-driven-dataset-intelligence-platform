@@ -1,10 +1,6 @@
 import logging
 from typing import Any
 
-from eventforge.agents.export import (
-    parse_annotation_all_completed_event,
-    process_annotation_all_completed,
-)
 from eventforge.core.config import get_settings
 from eventforge.db.session import get_session_factory
 from eventforge.events.parser import parse_eventbridge_sqs_body
@@ -12,6 +8,10 @@ from eventforge.events.publisher import EventPublisher
 from eventforge.events.schemas.constants import (
     DETAIL_TYPE_ANNOTATION_ALL_COMPLETED,
     DETAIL_TYPE_ANNOTATION_TASK_COMPLETED,
+)
+from eventforge.stages.export import (
+    parse_annotation_all_completed_event,
+    process_annotation_all_completed,
 )
 from eventforge.workers.base import SqsConsumer
 from eventforge.workers.bootstrap import main

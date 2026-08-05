@@ -7,10 +7,10 @@ import os
 import sys
 from typing import Any
 
-from eventforge.agents.annotation import parse_planning_completed_event, prepare_annotation_fanout
 from eventforge.core.config import get_settings
 from eventforge.db.session import get_session_factory
 from eventforge.services.step_functions import send_task_failure, send_task_success
+from eventforge.stages.annotation import parse_planning_completed_event, prepare_annotation_fanout
 
 logger = logging.getLogger(__name__)
 

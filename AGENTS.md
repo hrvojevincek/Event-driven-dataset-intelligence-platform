@@ -73,7 +73,7 @@ make down                              # stop
 ├── dataset-pivot.mdc        pivot — target product, terminology, constraints
 ├── backend-python.mdc       backend/**
 ├── frontend-nextjs.mdc      frontend/**
-├── event-pipeline.mdc       agents, workers, events (legacy + target flow)
+├── event-pipeline.mdc       stages, workers, events (legacy + target flow)
 ├── infra-aws.mdc            infra, docker-compose
 └── docs-workflow.mdc        docs, TASKS, workflow
 ```

@@ -17,7 +17,7 @@
 | `eventforge-core.mdc` | Stack, architecture, commands, behavior        | **Always**                          |
 | `backend-python.mdc`  | FastAPI, agents, workers, DB                   | `backend/**`                        |
 | `frontend-nextjs.mdc` | Next.js, React Flow, SSE                       | `frontend/**`                       |
-| `event-pipeline.mdc`  | Events, idempotency, stage contracts           | agents/workers/events               |
+| `event-pipeline.mdc`  | Events, idempotency, stage contracts           | stages/workers/events               |
 | `infra-aws.mdc`       | Docker, LocalStack, Terraform                  | `infra/**`                          |
 | `dataset-pivot.mdc`   | Target product, terminology, pivot constraints | `backend/**`, `frontend/**`, events |
 | `docs-workflow.mdc`   | TASKS, phases, Linear sync                     | `docs/**`                           |

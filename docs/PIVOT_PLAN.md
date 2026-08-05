@@ -144,7 +144,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 - [x] `services/storage/local.py` — save uploads to `./data/uploads/{project_id}/`
 - [x] `services/intake/` — file validation, mime detection, provenance metadata
-- [x] `agents/intake.py` + `workers/intake.py`
+- [x] `stages/intake.py` + `workers/intake.py`
 - [x] `api/routes/projects.py` — `POST /api/v1/projects` (multipart + `schema_template` or `schema_json`)
 - [x] `services/project.py` (rename from `query.py`) — emit `project.submitted`
 - [x] Delete Tavily from intake path
@@ -161,7 +161,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 - [x] `services/preprocessing/extract.py` — plain text + PDF (`pypdf`)
 - [x] `services/preprocessing/segmentation.py` — paragraph / token-window segments
-- [x] `agents/preprocessing.py` + `workers/preprocessing.py`
+- [x] `stages/preprocessing.py` + `workers/preprocessing.py`
 - [x] Delete `services/embedding/` entirely
 - [x] Remove embedding config + OpenAI embedding calls
 
@@ -184,7 +184,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 - [x] `services/planning/schema_templates.py` — Support call + Document classification templates
 - [x] `services/planning/task_builder.py` — merge template + override; batch segments into N tasks
-- [x] `agents/planning.py` + `workers/planning.py`
+- [x] `stages/planning.py` + `workers/planning.py`
 - [x] Validate `schema_json` against template constraints
 
 **Exit:** Segments → N `AnnotationTask` rows driven by chosen template.
@@ -198,7 +198,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 **v1:** Step Functions Map for annotation fan-out; fallback to sequential in local dev per LocalStack limits.
 
 - [x] `services/annotation/labeler.py` — LLM labels segment batch; JSON schema validation; confidence flag
-- [x] `agents/annotation.py` + `workers/annotation.py`
+- [x] `stages/annotation.py` + `workers/annotation.py`
 - [x] Update Step Functions ASL template (annotation naming) — local init script only
 - [x] Delete `services/research/`, Tavily research usage
 
@@ -212,7 +212,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 - [x] `services/export/merge.py` — combine batches → JSONL
 - [x] `services/export/qc.py` — coverage %, schema compliance, low-confidence flags, cost total
-- [x] `agents/export.py` + `workers/export.py`
+- [x] `stages/export.py` + `workers/export.py`
 - [x] `GET /api/v1/projects/{id}/export` — download JSONL
 
 **Exit:** Full pipeline → JSONL + QC report. **Full E2E milestone.**
@@ -282,7 +282,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 | ----------- | ------------------------------------------------------------------------------------ |
 | Models      | `backend/src/eventforge/db/models/base.py`                                           |
 | Events      | `shared/events/`, `backend/src/eventforge/events/schemas/`                           |
-| Agents      | `backend/src/eventforge/agents/{intake,preprocessing,planning,annotation,export}.py` |
+| Stages      | `backend/src/eventforge/stages/{intake,preprocessing,planning,annotation,export}.py` |
 | Workers     | `backend/src/eventforge/workers/`                                                    |
 | Services    | `services/{storage,intake,preprocessing,planning,annotation,export}/`                |
 | API         | `api/routes/projects.py`                                                             |

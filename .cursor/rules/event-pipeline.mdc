@@ -1,6 +1,6 @@
 ---
 description: Event schemas, pipeline flow, idempotency, and agent stage contracts
-globs: shared/events/**,backend/**/events/**,backend/**/agents/**,backend/**/workers/**
+globs: shared/events/**,backend/**/events/**,backend/**/stages/**,backend/**/workers/**
 alwaysApply: false
 ---
 

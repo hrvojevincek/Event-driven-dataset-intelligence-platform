@@ -61,33 +61,6 @@ def segment_text(
     ]
 
 
-def chunk_text(
-    text: str,
-    *,
-    chunk_size: int,
-    overlap: int,
-    source_kind: SourceKind = SourceKind.PLAIN,
-    encoding_name: str = DEFAULT_ENCODING,
-) -> list[str]:
-    """Split text into overlapping token windows."""
-    return [
-        segment.content
-        for segment in segment_text(
-            text,
-            chunk_size=chunk_size,
-            overlap=overlap,
-            source_kind=source_kind,
-            encoding_name=encoding_name,
-        )
-    ]
-
-
-def build_source_text(*, title: str, snippet: str) -> str:
-    """Combine title and body text for legacy chunking helpers."""
-    parts = [title.strip(), snippet.strip()]
-    return "\n\n".join(part for part in parts if part)
-
-
 def _split_blocks(text: str, source_kind: SourceKind) -> list[str]:
     if source_kind == SourceKind.MARKDOWN:
         return _split_markdown_blocks(text)
