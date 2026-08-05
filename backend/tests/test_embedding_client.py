@@ -6,8 +6,8 @@ import pytest
 
 from eventforge.core.config import Settings
 from eventforge.events.schemas.constants import EMBEDDING_DIMENSION
-from eventforge.services.embedding.chunking import build_source_text, chunk_text
-from eventforge.services.embedding.client import EmbeddingClient
+from eventforge.services.legacy.embedding import EmbeddingClient
+from eventforge.services.preprocessing.segmentation import build_source_text, chunk_text
 
 
 def test_build_source_text_joins_title_and_snippet() -> None:
@@ -43,7 +43,6 @@ async def test_embedding_client_raises_when_api_key_missing() -> None:
 async def test_embedding_client_returns_vectors_and_logs_usage() -> None:
     settings = Settings(
         openai_api_key="test-openai",
-        embedding_model="text-embedding-3-small",
         job_max_cost_usd=None,
     )
     session = AsyncMock()
@@ -64,11 +63,14 @@ async def test_embedding_client_returns_vectors_and_logs_usage() -> None:
     async def _await_operation(_key, operation, **_kwargs):
         return await operation()
 
-    with patch(
-        "eventforge.services.embedding.client.LLMUsageRepository",
-    ) as mock_repo_cls, patch(
-        "eventforge.services.embedding.client.call_with_resilience",
-        side_effect=_await_operation,
+    with (
+        patch(
+            "eventforge.services.legacy.embedding.LLMUsageRepository",
+        ) as mock_repo_cls,
+        patch(
+            "eventforge.services.legacy.embedding.call_with_resilience",
+            side_effect=_await_operation,
+        ),
     ):
         mock_repo = AsyncMock()
         mock_repo_cls.return_value = mock_repo

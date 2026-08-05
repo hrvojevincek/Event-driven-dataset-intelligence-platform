@@ -11,7 +11,7 @@ from eventforge.events.schemas.constants import (
     WORKER_NAME_RESEARCH,
     WORKER_NAME_SYNTHESIS,
 )
-from eventforge.services.embedding.client import get_embedding_client
+from eventforge.services.legacy.embedding import get_embedding_client
 from eventforge.services.llm.client import get_llm_client
 from eventforge.services.llm.types import LLMMessage
 from eventforge.services.mock.fixtures import (
@@ -57,7 +57,7 @@ async def test_mock_tavily_returns_fixture_results() -> None:
 @pytest.mark.asyncio
 async def test_mock_embedding_returns_correct_dimension() -> None:
     settings = Settings(environment="local", mock_external_apis=True)
-    with patch("eventforge.services.embedding.client.get_settings", return_value=settings):
+    with patch("eventforge.services.legacy.embedding.get_settings", return_value=settings):
         client = get_embedding_client()
 
     vectors = await client.embed_texts(

@@ -1,3 +1,5 @@
+"""Legacy OpenAI embedding client for research pipeline code removed in Phases 5–6."""
+
 import logging
 import uuid
 
@@ -6,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from eventforge.core.config import Settings, get_settings
 from eventforge.db.repositories.llm_usage import LLMUsageRepository
-from eventforge.events.schemas.constants import EMBEDDING_DIMENSION
+from eventforge.events.schemas.constants import EMBEDDING_DIMENSION, EMBEDDING_MODEL
 from eventforge.services.resilience.cost_cap import assert_job_under_cost_cap
 from eventforge.services.resilience.errors import is_retryable_openai_error
 from eventforge.services.resilience.external_call import call_with_resilience
@@ -42,7 +44,7 @@ class EmbeddingClient:
         if self._session is not None:
             await assert_job_under_cost_cap(self._session, job_id, self._settings)
 
-        model = self._settings.embedding_model
+        model = EMBEDDING_MODEL
 
         async def _create_embeddings():
             return await self._client.embeddings.create(model=model, input=texts)
@@ -58,8 +60,7 @@ class EmbeddingClient:
 
         for vector in embeddings:
             if len(vector) != EMBEDDING_DIMENSION:
-                msg = f"Expected {EMBEDDING_DIMENSION} -dim embedding, got {
-                    len(vector)} "
+                msg = f"Expected {EMBEDDING_DIMENSION}-dim embedding, got {len(vector)}"
                 raise ValueError(msg)
 
         total_tokens = response.usage.total_tokens if response.usage else 0
@@ -105,13 +106,11 @@ class EmbeddingClient:
         return embeddings
 
 
-def get_embedding_client(
-        session: AsyncSession | None = None) -> EmbeddingClient:
+def get_embedding_client(session: AsyncSession | None = None) -> EmbeddingClient:
     """Build an embedding client, optionally bound to a DB session for usage logging."""
     settings = get_settings()
     if settings.use_mock_external_apis:
         from eventforge.services.mock.embedding import MockEmbeddingClient
 
-        # type: ignore[return-value]
-        return MockEmbeddingClient(settings, session=session)
+        return MockEmbeddingClient(settings, session=session)  # type: ignore[return-value]
     return EmbeddingClient(settings=settings, session=session)

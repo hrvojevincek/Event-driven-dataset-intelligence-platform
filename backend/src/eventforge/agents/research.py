@@ -35,11 +35,11 @@ from eventforge.events.schemas import (
     build_research_task_dispatched_event,
 )
 from eventforge.events.schemas.constants import DETAIL_TYPE_KNOWLEDGE_MINED
-from eventforge.services.embedding import EmbeddingClient, get_embedding_client
 from eventforge.services.knowledge import (
     expected_research_task_count,
     research_entities_for_fanout,
 )
+from eventforge.services.legacy.embedding import EmbeddingClient, get_embedding_client
 from eventforge.services.llm.client import LLMClient, get_llm_client
 from eventforge.services.research import (
     generate_research_note,
@@ -59,9 +59,7 @@ async def _build_dispatched_events(
     sub_queries = await generate_sub_queries(llm_client, job, research_targets)
     all_entity_ids = [entity.id for entity in entities]
     dispatched: list[ResearchTaskDispatchedEvent] = []
-    for task_index, (_, sub_query) in enumerate(
-        zip(research_targets, sub_queries, strict=True)
-    ):
+    for task_index, (_, sub_query) in enumerate(zip(research_targets, sub_queries, strict=True)):
         task_id = deterministic_research_task_id(job.id, task_index)
         dispatched.append(
             build_research_task_dispatched_event(
@@ -135,9 +133,7 @@ async def prepare_research_fanout(
     processed_repo = ProcessedEventRepository(session)
     event_id = str(event.event_id)
 
-    if not await processed_repo.try_claim(
-        event_id, WORKER_NAME_RESEARCH_ORCHESTRATOR
-    ):
+    if not await processed_repo.try_claim(event_id, WORKER_NAME_RESEARCH_ORCHESTRATOR):
         return None
 
     job_repo = JobRepository(session)
@@ -150,9 +146,7 @@ async def prepare_research_fanout(
         msg = f"Job not found for research fan-out: {event.job_id}"
         raise ValueError(msg)
 
-    research_stage = await stage_repo.get_by_job_and_stage(
-        job.id, JobStageName.RESEARCH.value
-    )
+    research_stage = await stage_repo.get_by_job_and_stage(job.id, JobStageName.RESEARCH.value)
     if research_stage is None:
         msg = f"Research stage missing for job: {job.id}"
         raise ValueError(msg)
@@ -163,9 +157,7 @@ async def prepare_research_fanout(
         raise ValueError(msg)
 
     await stage_repo.mark_running(research_stage)
-    dispatched_events = await _build_dispatched_events(
-        event, job, entities, llm_client=llm_client
-    )
+    dispatched_events = await _build_dispatched_events(event, job, entities, llm_client=llm_client)
     await session.commit()
     return dispatched_events
 
@@ -182,9 +174,7 @@ async def process_knowledge_mined(
     processed_repo = ProcessedEventRepository(session)
     event_id = str(event.event_id)
 
-    dispatched_events = await prepare_research_fanout(
-        session, event, llm_client=llm_client
-    )
+    dispatched_events = await prepare_research_fanout(session, event, llm_client=llm_client)
     if dispatched_events is None:
         return None
 
@@ -192,9 +182,7 @@ async def process_knowledge_mined(
         for dispatched in dispatched_events:
             await publisher.publish(dispatched, source=EVENT_SOURCE_RESEARCH)
     except EventPublishError:
-        await processed_repo.release_claim(
-            event_id, WORKER_NAME_RESEARCH_ORCHESTRATOR
-        )
+        await processed_repo.release_claim(event_id, WORKER_NAME_RESEARCH_ORCHESTRATOR)
         await session.commit()
         raise
 
@@ -232,9 +220,7 @@ async def process_research_task_dispatched(
         msg = f"Job not found for research task: {event.job_id}"
         raise ValueError(msg)
 
-    research_stage = await stage_repo.get_by_job_and_stage(
-        job.id, JobStageName.RESEARCH.value
-    )
+    research_stage = await stage_repo.get_by_job_and_stage(job.id, JobStageName.RESEARCH.value)
     if research_stage is None:
         msg = f"Research stage missing for job: {job.id}"
         raise ValueError(msg)

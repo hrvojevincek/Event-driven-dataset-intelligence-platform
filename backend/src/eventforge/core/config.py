@@ -45,9 +45,8 @@ class Settings(BaseSettings):
     tavily_api_key: str = ""
     llm_default_model: str = "gpt-4o-mini"
     llm_max_output_tokens: int = 4096
-    embedding_model: str = "text-embedding-3-small"
-    embedding_chunk_size_tokens: int = 512
-    embedding_chunk_overlap_tokens: int = 50
+    preprocessing_segment_size_tokens: int = 512
+    preprocessing_segment_overlap_tokens: int = 50
     knowledge_rag_top_k: int = 10
     knowledge_max_entities: int = 4
     research_rag_top_k: int = 8

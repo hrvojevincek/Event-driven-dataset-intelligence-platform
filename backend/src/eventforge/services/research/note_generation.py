@@ -7,7 +7,7 @@ from eventforge.core.config import Settings, get_settings
 from eventforge.db.models import DocumentChunk, Job, KnowledgeEntity, Source
 from eventforge.db.repositories import DocumentChunkRepository, SourceRepository
 from eventforge.events.schemas.constants import WORKER_NAME_RESEARCH
-from eventforge.services.embedding import EmbeddingClient
+from eventforge.services.legacy.embedding import EmbeddingClient
 from eventforge.services.llm.client import LLMClient
 from eventforge.services.llm.types import LLMMessage
 from eventforge.services.search.tavily import (
@@ -23,7 +23,8 @@ _RESEARCH_NOTE_SYSTEM = (
     "You are a research analyst synthesizing findings for one focused sub-query. "
     "Write clear markdown with sections: Key findings, Evidence summary, Open questions. "
     "Cite ingested context inline as [RAG-n] and web follow-up as [WEB-n]. "
-    "Stay grounded in the provided sources; do not invent citations.")
+    "Stay grounded in the provided sources; do not invent citations."
+)
 
 
 def _build_note_prompt(
@@ -39,8 +40,7 @@ def _build_note_prompt(
         f"Sub-query: {sub_query}",
     ]
     if focus_entity is not None:
-        lines.append(
-            f"Focus entity: {focus_entity.name} ({focus_entity.entity_type})")
+        lines.append(f"Focus entity: {focus_entity.name} ({focus_entity.entity_type})")
     lines.extend(["", "Ingested context (cite as [RAG-n]):"])
 
     if rag_chunks:
@@ -72,9 +72,7 @@ def _build_note_prompt(
         lines.append("(No web follow-up results.)")
         lines.append("")
 
-    lines.append(
-        "Synthesize focused findings that answer the sub-query using the sources above."
-    )
+    lines.append("Synthesize focused findings that answer the sub-query using the sources above.")
     return "\n".join(lines)
 
 

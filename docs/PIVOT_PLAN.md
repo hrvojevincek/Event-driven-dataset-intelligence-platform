@@ -45,7 +45,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 | 1     | Data model          | ✅ Done        |
 | 2     | Event contracts     | ✅ Done        |
 | 3     | Intake stage        | ✅ Done        |
-| 4     | Preprocessing stage | ⬜ Not started |
+| 4     | Preprocessing stage | ✅ Done        |
 | 5     | Planning stage      | ⬜ Not started |
 | 6     | Annotation stage    | ⬜ Not started |
 | 7     | Export stage        | ⬜ Not started |
@@ -55,7 +55,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 
 **Legend:** ⬜ Not started · 🟡 In progress · ✅ Done
 
-**Next:** Phase 4 — Preprocessing stage
+**Next:** Phase 5 — Planning stage
 
 ---
 
@@ -159,11 +159,11 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 **v1:** Single worker processes all assets sequentially (no per-asset Map state).
 
-- [ ] `services/preprocessing/extract.py` — plain text + PDF (`pypdf`)
-- [ ] `services/preprocessing/segmentation.py` — paragraph / token-window segments
-- [ ] `agents/preprocessing.py` + `workers/preprocessing.py`
-- [ ] Delete `services/embedding/` entirely
-- [ ] Remove embedding config + OpenAI embedding calls
+- [x] `services/preprocessing/extract.py` — plain text + PDF (`pypdf`)
+- [x] `services/preprocessing/segmentation.py` — paragraph / token-window segments
+- [x] `agents/preprocessing.py` + `workers/preprocessing.py`
+- [x] Delete `services/embedding/` entirely
+- [x] Remove embedding config + OpenAI embedding calls
 
 **Exit:** PDFs/text → segments in DB. First **vertical-slice E2E**: upload → segments.
 
