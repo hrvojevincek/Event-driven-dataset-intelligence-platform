@@ -30,8 +30,8 @@ from eventforge.events.schemas import (
     build_knowledge_mined_event,
 )
 from eventforge.events.schemas.constants import DETAIL_TYPE_EMBEDDING_COMPLETED
-from eventforge.services.embedding import EmbeddingClient, get_embedding_client
 from eventforge.services.knowledge import extract_knowledge_entities
+from eventforge.services.legacy.embedding import EmbeddingClient, get_embedding_client
 from eventforge.services.llm.client import LLMClient, get_llm_client
 
 
@@ -115,9 +115,7 @@ async def process_embedding_completed(
     )
     chunks = list(result.scalars().all())
     if len(chunks) != len(event.payload.chunk_ids):
-        msg = (
-            f"Document chunks missing for knowledge mining job: {event.job_id}"
-        )
+        msg = f"Document chunks missing for knowledge mining job: {event.job_id}"
         raise ValueError(msg)
 
     await stage_repo.mark_running(knowledge_stage)

@@ -33,7 +33,7 @@ from eventforge.events.schemas import (
     WORKER_NAME_KNOWLEDGE,
     build_embedding_completed_event,
 )
-from eventforge.services.embedding import EmbeddingClient
+from eventforge.services.legacy.embedding import EmbeddingClient
 from eventforge.services.llm.client import LLMClient
 from eventforge.services.llm.types import LLMCompletionResult
 from eventforge.workers.knowledge import KnowledgeWorker

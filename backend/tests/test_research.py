@@ -39,8 +39,8 @@ from eventforge.events.schemas import (
     build_knowledge_mined_event,
     build_research_task_dispatched_event,
 )
-from eventforge.services.embedding import EmbeddingClient
 from eventforge.services.knowledge import expected_research_task_count
+from eventforge.services.legacy.embedding import EmbeddingClient
 from eventforge.services.llm.client import LLMClient
 from eventforge.services.llm.types import LLMCompletionResult
 from eventforge.services.search.tavily import TavilyClient
@@ -48,9 +48,7 @@ from eventforge.workers.research import ResearchWorker
 
 settings = get_settings()
 
-_SUB_QUERIES_JSON = json.dumps(
-    ["How does concept alpha relate to parallel research patterns?"]
-)
+_SUB_QUERIES_JSON = json.dumps(["How does concept alpha relate to parallel research patterns?"])
 _RESEARCH_NOTE = "## Key findings\n\n- Parallel fan-out improves throughput [RAG-0]."
 
 
@@ -267,9 +265,7 @@ async def test_process_research_task_dispatched_writes_note_and_publishes(
     assert result.payload.task_id == task_id
     mock_publisher.publish.assert_awaited_once()
 
-    note = await db_session.scalar(
-        select(ResearchNote).where(ResearchNote.job_id == job.id)
-    )
+    note = await db_session.scalar(select(ResearchNote).where(ResearchNote.job_id == job.id))
     assert note is not None
     assert note.content == _RESEARCH_NOTE
     assert "Mock research" not in note.content
