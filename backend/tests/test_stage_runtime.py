@@ -49,7 +49,7 @@ async def test_begin_raises_when_project_missing() -> None:
         "eventforge.stages._runtime.ProcessedEventRepository",
         return_value=processed_repo,
     ):
-        with pytest.raises(ValueError, match="Project not found"):
+        with pytest.raises(ValueError, match="Job not found"):
             await StageRun.begin(
                 session,
                 AsyncMock(),
@@ -67,8 +67,8 @@ async def test_publish_releases_claim_on_failure() -> None:
     publisher.publish = AsyncMock(side_effect=EventPublishError("boom"))
     processed_repo = AsyncMock()
     processed_repo.release_claim = AsyncMock()
-    project = MagicMock()
-    project.id = uuid.uuid4()
+    job = MagicMock()
+    job.id = uuid.uuid4()
 
     run = StageRun(
         session=session,
@@ -77,7 +77,7 @@ async def test_publish_releases_claim_on_failure() -> None:
         stage_repo=AsyncMock(),
         worker_name="export",
         event_id="evt-1",
-        project=project,
+        job=job,
     )
 
     with pytest.raises(EventPublishError):
@@ -101,7 +101,7 @@ async def test_defer_releases_claim_and_commits() -> None:
         stage_repo=AsyncMock(),
         worker_name="export",
         event_id="evt-2",
-        project=MagicMock(),
+        job=MagicMock(),
     )
 
     await run.defer()

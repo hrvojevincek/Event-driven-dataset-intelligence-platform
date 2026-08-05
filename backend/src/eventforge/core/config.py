@@ -148,23 +148,23 @@ class Settings(BaseSettings):
 
     @property
     def intake_queue_name(self) -> str:
-        return f"{self.sqs_queue_prefix}-ingestion"
+        return f"{self.sqs_queue_prefix}-intake"
 
     @property
-    def embedding_queue_name(self) -> str:
-        return f"{self.sqs_queue_prefix}-embedding"
+    def preprocessing_queue_name(self) -> str:
+        return f"{self.sqs_queue_prefix}-preprocessing"
 
     @property
-    def knowledge_mining_queue_name(self) -> str:
-        return f"{self.sqs_queue_prefix}-knowledge-mining"
+    def planning_queue_name(self) -> str:
+        return f"{self.sqs_queue_prefix}-planning"
 
     @property
-    def research_queue_name(self) -> str:
-        return f"{self.sqs_queue_prefix}-research"
+    def annotation_queue_name(self) -> str:
+        return f"{self.sqs_queue_prefix}-annotation"
 
     @property
-    def synthesis_queue_name(self) -> str:
-        return f"{self.sqs_queue_prefix}-synthesis"
+    def export_queue_name(self) -> str:
+        return f"{self.sqs_queue_prefix}-export"
 
     @property
     def dlq_queue_name(self) -> str:

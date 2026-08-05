@@ -146,7 +146,7 @@ async def prepare_annotation_fanout(
 
 
 @traced_stage(WORKER_NAME_ANNOTATION_ORCHESTRATOR)
-async def process_planning_completed(
+async def run_annotation_fanout(
     session: AsyncSession,
     publisher: EventPublisher,
     event: PlanningCompletedEvent,
@@ -167,7 +167,7 @@ async def process_planning_completed(
 
 
 @traced_stage(WORKER_NAME_ANNOTATION)
-async def process_annotation_task_dispatched(
+async def run_annotation_task(
     session: AsyncSession,
     publisher: EventPublisher,
     event: AnnotationTaskDispatchedEvent,
@@ -186,7 +186,7 @@ async def process_annotation_task_dispatched(
         return None
 
     await run.require_stage(JobStageName.ANNOTATION)
-    label_schema = load_label_schema(run.project.schema_json, run.project.schema_template)
+    label_schema = load_label_schema(run.job.schema_json, run.job.schema_template)
     llm_client = llm_client or get_llm_client(session=session)
     batch = await _load_or_create_batch(
         session,
@@ -196,21 +196,21 @@ async def process_annotation_task_dispatched(
     )
 
     completed_event = build_annotation_task_completed_event(
-        job_id=run.project.id,
+        job_id=run.job.id,
         correlation_id=event.correlation_id,
         task_id=event.payload.task_id,
         batch_id=batch.id,
         task_index=event.payload.task_index,
         event_id=deterministic_event_id(
-            run.project.id,
+            run.job.id,
             f"{DETAIL_TYPE_ANNOTATION_TASK_COMPLETED}:{event.payload.task_index}",
         ),
     )
 
     task_repo = AnnotationTaskRepository(session)
     batch_repo = AnnotationBatchRepository(session)
-    expected_tasks = len(await task_repo.list_by_project_id(run.project.id))
-    batch_count = await batch_repo.count_by_job_id(run.project.id)
+    expected_tasks = len(await task_repo.list_by_project_id(run.job.id))
+    batch_count = await batch_repo.count_by_job_id(run.job.id)
     all_completed_event: AnnotationAllCompletedEvent | None = None
     if batch_count >= expected_tasks:
         annotation_stage = await run.require_stage(JobStageName.ANNOTATION)
@@ -218,11 +218,11 @@ async def process_annotation_task_dispatched(
         # Step Functions publishes annotation.all_completed after Map; local mode emits here.
         if get_settings().research_orchestration_mode == "local":
             all_completed_event = build_annotation_all_completed_event(
-                job_id=run.project.id,
+                job_id=run.job.id,
                 correlation_id=event.correlation_id,
                 task_count=expected_tasks,
                 event_id=deterministic_event_id(
-                    run.project.id,
+                    run.job.id,
                     DETAIL_TYPE_ANNOTATION_ALL_COMPLETED,
                 ),
             )

@@ -30,7 +30,7 @@ from eventforge.events.schemas import (
 from eventforge.services.intake.templates import SUPPORT_CALL_TEMPLATE
 from eventforge.stages.planning import (
     parse_preprocessing_completed_event,
-    process_preprocessing_completed,
+    run_planning,
 )
 from eventforge.workers.planning import PlanningWorker
 
@@ -100,7 +100,7 @@ def test_parse_preprocessing_completed_event_rejects_wrong_type() -> None:
         parse_preprocessing_completed_event({"detail_type": "eventforge.intake.completed"})
 
 
-async def test_process_preprocessing_completed_writes_tasks_and_updates_stage(
+async def test_run_planning_writes_tasks_and_updates_stage(
     db_session: AsyncSession,
 ) -> None:
     job, stage, segments = await _seed_project_with_segments(db_session)
@@ -112,7 +112,7 @@ async def test_process_preprocessing_completed_writes_tasks_and_updates_stage(
         segment_ids=[segment.id for segment in segments],
     )
 
-    result = await process_preprocessing_completed(db_session, mock_publisher, inbound)
+    result = await run_planning(db_session, mock_publisher, inbound)
 
     assert result is not None
     assert result.detail_type == DETAIL_TYPE_PLANNING_COMPLETED
@@ -133,7 +133,7 @@ async def test_process_preprocessing_completed_writes_tasks_and_updates_stage(
     assert record.worker_name == WORKER_NAME_PLANNING
 
 
-async def test_process_preprocessing_completed_skips_duplicate_event(
+async def test_run_planning_skips_duplicate_event(
     db_session: AsyncSession,
 ) -> None:
     job, _, segments = await _seed_project_with_segments(db_session)
@@ -144,10 +144,10 @@ async def test_process_preprocessing_completed_skips_duplicate_event(
         segment_ids=[segment.id for segment in segments],
     )
 
-    await process_preprocessing_completed(db_session, mock_publisher, inbound)
+    await run_planning(db_session, mock_publisher, inbound)
     mock_publisher.reset_mock()
 
-    duplicate = await process_preprocessing_completed(db_session, mock_publisher, inbound)
+    duplicate = await run_planning(db_session, mock_publisher, inbound)
     assert duplicate is None
     mock_publisher.publish.assert_not_awaited()
 
@@ -167,7 +167,7 @@ async def test_planning_worker_deletes_message_on_success() -> None:
         "Messages": [{"ReceiptHandle": "rh-1", "Body": body, "MessageId": "m-1"}]
     }
     worker._client = mock_client
-    worker._queue_url = "http://localstack/000000000000/eventforge-knowledge-mining"
+    worker._queue_url = "http://localstack/000000000000/eventforge-planning"
 
     with patch.object(worker, "handle_message", new=AsyncMock()):
         handled = await worker.poll_once()

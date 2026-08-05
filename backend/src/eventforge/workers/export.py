@@ -2,32 +2,28 @@ import logging
 from typing import Any
 
 from eventforge.core.config import get_settings
-from eventforge.db.session import get_session_factory
 from eventforge.events.parser import parse_eventbridge_sqs_body
-from eventforge.events.publisher import EventPublisher
 from eventforge.events.schemas.constants import (
     DETAIL_TYPE_ANNOTATION_ALL_COMPLETED,
     DETAIL_TYPE_ANNOTATION_TASK_COMPLETED,
 )
 from eventforge.stages.export import (
     parse_annotation_all_completed_event,
-    process_annotation_all_completed,
+    run_export,
 )
-from eventforge.workers.base import SqsConsumer
 from eventforge.workers.bootstrap import main
 from eventforge.workers.cost_cap import run_with_cost_cap_handling
+from eventforge.workers.stage_worker import StageWorker
 
 logger = logging.getLogger(__name__)
 
 
-class ExportWorker(SqsConsumer):
+class ExportWorker(StageWorker):
     """Consumes annotation.all_completed events and runs the export agent."""
 
     def __init__(self) -> None:
         settings = get_settings()
-        super().__init__(settings.synthesis_queue_name, settings)
-        self._publisher = EventPublisher(settings)
-        self._session_factory = get_session_factory(settings)
+        super().__init__(settings.export_queue_name, settings)
 
     async def handle_message(self, message: dict[str, Any]) -> None:
         detail = parse_eventbridge_sqs_body(message["Body"])
@@ -55,7 +51,7 @@ class ExportWorker(SqsConsumer):
 
         async def _process():
             async with self._session_factory() as session:
-                return await process_annotation_all_completed(session, self._publisher, event)
+                return await run_export(session, self._publisher, event)
 
         result = await run_with_cost_cap_handling(
             self._session_factory,

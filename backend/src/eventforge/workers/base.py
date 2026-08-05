@@ -16,7 +16,12 @@ SQS_QUEUE_WAIT_MAX_SECONDS = 10.0
 
 
 class SqsConsumer(ABC):
-    """Long-poll an SQS queue and dispatch messages to handle_message."""
+    """Long-poll an SQS queue and dispatch messages to handle_message.
+
+    Handlers should finish within the queue visibility timeout; otherwise SQS
+    may redeliver the message. Stage idempotency (``processed_events``) handles
+    duplicate delivery.
+    """
 
     def __init__(
         self,
@@ -39,10 +44,13 @@ class SqsConsumer(ABC):
             self._client = boto_client("sqs", self._settings)
         return self._client
 
-    @property
-    def queue_url(self) -> str:
+    def _require_queue_url(self) -> str:
         if self._queue_url is None:
-            self._resolve_queue_url()
+            msg = (
+                f"SQS queue URL not resolved for {self._queue_name}; "
+                "call _wait_for_queue_ready() or set _queue_url in tests"
+            )
+            raise RuntimeError(msg)
         return self._queue_url
 
     def _resolve_queue_url(self) -> str:
@@ -93,7 +101,7 @@ class SqsConsumer(ABC):
     def _receive_messages(self) -> tuple[list[dict[str, Any]], bool]:
         try:
             response = self.client.receive_message(
-                QueueUrl=self.queue_url,
+                QueueUrl=self._require_queue_url(),
                 MaxNumberOfMessages=self._max_messages,
                 WaitTimeSeconds=self._wait_time_seconds,
                 MessageAttributeNames=["All"],
@@ -109,7 +117,10 @@ class SqsConsumer(ABC):
 
     def _delete_message(self, receipt_handle: str) -> None:
         try:
-            self.client.delete_message(QueueUrl=self.queue_url, ReceiptHandle=receipt_handle)
+            self.client.delete_message(
+                QueueUrl=self._require_queue_url(),
+                ReceiptHandle=receipt_handle,
+            )
         except (BotoCoreError, ClientError):
             # Delete failure means the message redelivers; idempotency guards
             # against double-processing. Log so the failure is visible.
@@ -120,4 +131,7 @@ class SqsConsumer(ABC):
 
     @abstractmethod
     async def handle_message(self, message: dict[str, Any]) -> None:
-        """Process one SQS message. Raise to leave the message for retry."""
+        """Process one SQS message.
+
+        Raise on failure so the message is not deleted and SQS can retry.
+        """

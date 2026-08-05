@@ -66,7 +66,7 @@ async def _load_or_create_segments(
 
 
 @traced_stage(WORKER_NAME_PREPROCESSING)
-async def process_intake_completed(
+async def run_preprocessing(
     session: AsyncSession,
     publisher: EventPublisher,
     event: IntakeCompletedEvent,
@@ -79,7 +79,6 @@ async def process_intake_completed(
         publisher,
         event,
         worker_name=WORKER_NAME_PREPROCESSING,
-        project_label="job",
     )
     if run is None:
         return None
@@ -96,7 +95,7 @@ async def process_intake_completed(
     await run.mark_running(preprocessing_stage)
     segments = await _load_or_create_segments(
         session,
-        run.project.id,
+        run.job.id,
         assets,
         store,
         chunk_size=settings.preprocessing_segment_size_tokens,
@@ -104,10 +103,10 @@ async def process_intake_completed(
     )
 
     completed_event = build_preprocessing_completed_event(
-        job_id=run.project.id,
+        job_id=run.job.id,
         correlation_id=event.correlation_id,
         segment_ids=[segment.id for segment in segments],
-        event_id=deterministic_event_id(run.project.id, DETAIL_TYPE_PREPROCESSING_COMPLETED),
+        event_id=deterministic_event_id(run.job.id, DETAIL_TYPE_PREPROCESSING_COMPLETED),
     )
 
     await run.complete_stage(preprocessing_stage)

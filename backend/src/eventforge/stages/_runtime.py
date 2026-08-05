@@ -25,9 +25,25 @@ class PipelineEvent(Protocol):
     def job_id(self) -> uuid.UUID: ...
 
 
+async def _load_job(
+    session: AsyncSession,
+    event: PipelineEvent,
+    *,
+    worker_name: str,
+    job_label: str = "job",
+    job_repo: JobRepository | None = None,
+) -> Job:
+    repo = job_repo or JobRepository(session)
+    job = await repo.get_by_id(event.job_id)
+    if job is None:
+        msg = f"{job_label.capitalize()} not found for {worker_name}: {event.job_id}"
+        raise ValueError(msg)
+    return job
+
+
 @dataclass
 class StageRun:
-    """Per-event execution context: claim, project row, stage repo, and publish rollback."""
+    """Per-event execution context: claim, job row, stage repo, and publish rollback."""
 
     session: AsyncSession
     publisher: EventPublisher | None
@@ -35,7 +51,7 @@ class StageRun:
     stage_repo: JobStageRepository
     worker_name: str
     event_id: str
-    project: Job
+    job: Job
 
     @classmethod
     async def begin(
@@ -46,22 +62,23 @@ class StageRun:
         *,
         worker_name: str,
         claim: bool = True,
-        project_label: str = "project",
+        job_label: str = "job",
         job_repo: JobRepository | None = None,
     ) -> StageRun | None:
-        """Claim the event (optional) and load the project. Returns None when already processed."""
+        """Claim the event (optional) and load the job. Returns None when already processed."""
         processed_repo = ProcessedEventRepository(session)
         event_id = str(event.event_id)
 
         if claim and not await processed_repo.try_claim(event_id, worker_name):
             return None
 
-        repo = job_repo or JobRepository(session)
-        project = await repo.get_by_id(event.job_id)
-        if project is None:
-            msg = f"{project_label.capitalize()} not found for {worker_name}: {event.job_id}"
-            raise ValueError(msg)
-
+        job = await _load_job(
+            session,
+            event,
+            worker_name=worker_name,
+            job_label=job_label,
+            job_repo=job_repo,
+        )
         return cls(
             session=session,
             publisher=publisher,
@@ -69,7 +86,7 @@ class StageRun:
             stage_repo=JobStageRepository(session),
             worker_name=worker_name,
             event_id=event_id,
-            project=project,
+            job=job,
         )
 
     @classmethod
@@ -80,15 +97,17 @@ class StageRun:
         event: PipelineEvent,
         *,
         worker_name: str,
-        project_label: str = "project",
+        job_label: str = "job",
         job_repo: JobRepository | None = None,
     ) -> StageRun:
         """Wrap an already-claimed event for publish rollback (no new claim)."""
-        repo = job_repo or JobRepository(session)
-        project = await repo.get_by_id(event.job_id)
-        if project is None:
-            msg = f"{project_label.capitalize()} not found for {worker_name}: {event.job_id}"
-            raise ValueError(msg)
+        job = await _load_job(
+            session,
+            event,
+            worker_name=worker_name,
+            job_label=job_label,
+            job_repo=job_repo,
+        )
         return cls(
             session=session,
             publisher=publisher,
@@ -96,15 +115,15 @@ class StageRun:
             stage_repo=JobStageRepository(session),
             worker_name=worker_name,
             event_id=str(event.event_id),
-            project=project,
+            job=job,
         )
 
     async def require_stage(self, stage: JobStageName | str) -> JobStage:
         """Load the pipeline stage row or raise."""
         stage_name = stage.value if isinstance(stage, JobStageName) else stage
-        row = await self.stage_repo.get_by_job_and_stage(self.project.id, stage_name)
+        row = await self.stage_repo.get_by_job_and_stage(self.job.id, stage_name)
         if row is None:
-            msg = f"{stage_name} stage missing for project: {self.project.id}"
+            msg = f"{stage_name} stage missing for job: {self.job.id}"
             raise ValueError(msg)
         return row
 
@@ -124,8 +143,7 @@ class StageRun:
 
     async def defer(self) -> None:
         """Release the idempotency claim so the event can be retried later."""
-        await self.processed_repo.release_claim(self.event_id, self.worker_name)
-        await self.commit()
+        await self._release_claim_and_commit()
 
     async def publish(self, event: PublishableEvent, *, source: str) -> None:
         """Publish one event; release the claim if EventBridge fails after commit."""
@@ -135,8 +153,7 @@ class StageRun:
         try:
             await self.publisher.publish(event, source=source)
         except EventPublishError:
-            await self.processed_repo.release_claim(self.event_id, self.worker_name)
-            await self.commit()
+            await self._release_claim_and_commit()
             raise
 
     async def publish_many(self, events: list[PublishableEvent], *, source: str) -> None:
@@ -148,9 +165,12 @@ class StageRun:
             for event in events:
                 await self.publisher.publish(event, source=source)
         except EventPublishError:
-            await self.processed_repo.release_claim(self.event_id, self.worker_name)
-            await self.commit()
+            await self._release_claim_and_commit()
             raise
+
+    async def _release_claim_and_commit(self) -> None:
+        await self.processed_repo.release_claim(self.event_id, self.worker_name)
+        await self.commit()
 
 
 def parse_event[T: BaseModel](detail: dict, expected_detail_type: str, model: type[T]) -> T:

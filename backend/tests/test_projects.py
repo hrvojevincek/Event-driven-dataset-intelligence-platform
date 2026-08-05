@@ -12,7 +12,7 @@ from eventforge.api.deps import get_db, get_publisher
 from eventforge.core.config import Settings
 from eventforge.db.models import PIPELINE_STAGE_NAMES, Asset, Job, JobStage
 from eventforge.db.repositories import ProcessedEventRepository
-from eventforge.events.publisher import EventPublisher
+from eventforge.events.publisher import EVENT_SOURCE_API, EventPublisher
 from eventforge.events.schemas import ProjectSubmittedEvent
 from eventforge.main import app
 
@@ -75,10 +75,11 @@ async def test_create_project_stores_assets_and_publishes(
     assert body["asset_count"] == 2
     assert body["correlation_id"]
 
-    client.mock_publisher.publish_project_submitted.assert_awaited_once()  # type: ignore[attr-defined]
-    published: ProjectSubmittedEvent = (
-        client.mock_publisher.publish_project_submitted.await_args.args[0]  # type: ignore[attr-defined]
-    )
+    client.mock_publisher.publish.assert_awaited_once()  # type: ignore[attr-defined]
+    publish_call = client.mock_publisher.publish.await_args  # type: ignore[attr-defined]
+    assert publish_call is not None
+    assert publish_call.kwargs["source"] == EVENT_SOURCE_API
+    published: ProjectSubmittedEvent = publish_call.args[0]
     assert published.payload.name == "Support calls batch"
     assert published.payload.schema_template == "support_call"
     assert published.payload.asset_count == 2
@@ -134,9 +135,9 @@ async def test_create_project_publisher_claim_record(
     )
     assert response.status_code == 201
 
-    published: ProjectSubmittedEvent = (
-        client.mock_publisher.publish_project_submitted.await_args.args[0]  # type: ignore[attr-defined]
-    )
+    publish_call = client.mock_publisher.publish.await_args  # type: ignore[attr-defined]
+    assert publish_call is not None
+    published: ProjectSubmittedEvent = publish_call.args[0]
     repo = ProcessedEventRepository(db_session)
     record = await repo.get_by_event_id(str(published.event_id))
     assert record is not None

@@ -16,11 +16,6 @@ EVENT_SOURCE_PLANNING = "eventforge.workers.planning"
 EVENT_SOURCE_ANNOTATION = "eventforge.workers.annotation"
 EVENT_SOURCE_EXPORT = "eventforge.workers.export"
 EVENT_SOURCE_DLQ = "eventforge.workers.dlq"
-# Legacy event sources (same workers until Phases 3–7)
-EVENT_SOURCE_EMBEDDING = EVENT_SOURCE_PREPROCESSING
-EVENT_SOURCE_KNOWLEDGE = EVENT_SOURCE_PLANNING
-EVENT_SOURCE_RESEARCH = EVENT_SOURCE_ANNOTATION
-EVENT_SOURCE_SYNTHESIS = EVENT_SOURCE_EXPORT
 PUBLISHER_WORKER_NAME = "api"
 
 
@@ -30,6 +25,7 @@ class EventPublishError(Exception):
 
 class PublishableEvent(Protocol):
     """Minimal interface for events sent to EventBridge."""
+
     @property
     def detail_type(self) -> str: ...
 
@@ -38,6 +34,7 @@ class PublishableEvent(Protocol):
 
 class EventPublisher:
     """Publishes pipeline events to the EventBridge bus."""
+
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
         self._client: Any | None = None
@@ -47,9 +44,6 @@ class EventPublisher:
         if self._client is None:
             self._client = boto_client("events", self._settings)
         return self._client
-
-    async def publish_project_submitted(self, event: PublishableEvent) -> None:
-        await self.publish(event, source=EVENT_SOURCE_API)
 
     async def publish(self, event: PublishableEvent, *, source: str) -> None:
         await asyncio.to_thread(self._publish_sync, event, source)

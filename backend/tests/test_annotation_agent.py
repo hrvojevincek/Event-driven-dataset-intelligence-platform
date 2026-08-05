@@ -39,8 +39,8 @@ from eventforge.services.planning.task_builder import persist_planned_tasks
 from eventforge.stages.annotation import (
     parse_annotation_task_dispatched_event,
     parse_planning_completed_event,
-    process_annotation_task_dispatched,
-    process_planning_completed,
+    run_annotation_fanout,
+    run_annotation_task,
 )
 from eventforge.workers.annotation import AnnotationWorker
 
@@ -155,7 +155,7 @@ def test_parse_annotation_task_dispatched_event_rejects_wrong_type() -> None:
         )
 
 
-async def test_process_planning_completed_dispatches_tasks(
+async def test_run_annotation_fanout_dispatches_tasks(
     db_session: AsyncSession,
 ) -> None:
     job, stage, tasks, _ = await _seed_project_with_tasks(db_session)
@@ -167,7 +167,7 @@ async def test_process_planning_completed_dispatches_tasks(
         task_ids=[task.id for task in tasks],
     )
 
-    result = await process_planning_completed(db_session, mock_publisher, inbound)
+    result = await run_annotation_fanout(db_session, mock_publisher, inbound)
 
     assert result is not None
     assert len(result) == len(tasks)
@@ -183,7 +183,7 @@ async def test_process_planning_completed_dispatches_tasks(
     assert record.worker_name == WORKER_NAME_ANNOTATION_ORCHESTRATOR
 
 
-async def test_process_planning_completed_skips_duplicate(
+async def test_run_annotation_fanout_skips_duplicate(
     db_session: AsyncSession,
 ) -> None:
     job, _, tasks, _ = await _seed_project_with_tasks(db_session)
@@ -194,15 +194,15 @@ async def test_process_planning_completed_skips_duplicate(
         task_ids=[task.id for task in tasks],
     )
 
-    await process_planning_completed(db_session, mock_publisher, inbound)
+    await run_annotation_fanout(db_session, mock_publisher, inbound)
     mock_publisher.reset_mock()
 
-    duplicate = await process_planning_completed(db_session, mock_publisher, inbound)
+    duplicate = await run_annotation_fanout(db_session, mock_publisher, inbound)
     assert duplicate is None
     mock_publisher.publish.assert_not_awaited()
 
 
-async def test_process_annotation_task_writes_batch_and_completes_stage(
+async def test_run_annotation_task_writes_batch_and_completes_stage(
     db_session: AsyncSession,
 ) -> None:
     job, stage, tasks, segments = await _seed_project_with_tasks(db_session)
@@ -215,14 +215,14 @@ async def test_process_annotation_task_writes_batch_and_completes_stage(
         correlation_id=job.correlation_id,
         task_ids=[task.id for task in tasks],
     )
-    dispatched = await process_planning_completed(db_session, mock_publisher, planning_event)
+    dispatched = await run_annotation_fanout(db_session, mock_publisher, planning_event)
     assert dispatched is not None
     mock_publisher.reset_mock()
 
     for event in dispatched:
         # Multi-segment batches need matching LLM response shape — force 1 segment per call
         # by using the dispatched event as-is (support-call = 1 segment/task).
-        result = await process_annotation_task_dispatched(
+        result = await run_annotation_task(
             db_session,
             mock_publisher,
             event,
@@ -253,7 +253,7 @@ async def test_process_annotation_task_writes_batch_and_completes_stage(
     assert segments[0].content.startswith("Customer")
 
 
-async def test_process_annotation_task_skips_duplicate(
+async def test_run_annotation_task_skips_duplicate(
     db_session: AsyncSession,
 ) -> None:
     job, _, tasks, _ = await _seed_project_with_tasks(db_session)
@@ -265,17 +265,17 @@ async def test_process_annotation_task_skips_duplicate(
         correlation_id=job.correlation_id,
         task_ids=[task.id for task in tasks],
     )
-    dispatched = await process_planning_completed(db_session, mock_publisher, planning_event)
+    dispatched = await run_annotation_fanout(db_session, mock_publisher, planning_event)
     assert dispatched is not None
     mock_publisher.reset_mock()
 
-    first = await process_annotation_task_dispatched(
+    first = await run_annotation_task(
         db_session, mock_publisher, dispatched[0], llm_client=llm
     )
     assert first is not None
     mock_publisher.reset_mock()
 
-    duplicate = await process_annotation_task_dispatched(
+    duplicate = await run_annotation_task(
         db_session, mock_publisher, dispatched[0], llm_client=llm
     )
     assert duplicate is None
@@ -300,7 +300,7 @@ async def test_annotation_worker_deletes_message_on_success() -> None:
         "Messages": [{"ReceiptHandle": "rh-1", "Body": body, "MessageId": "m-1"}]
     }
     worker._client = mock_client
-    worker._queue_url = "http://localstack/000000000000/eventforge-research"
+    worker._queue_url = "http://localstack/000000000000/eventforge-annotation"
 
     with patch.object(worker, "handle_message", new=AsyncMock()):
         handled = await worker.poll_once()
