@@ -167,6 +167,15 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 **Exit:** PDFs/text → segments in DB. First **vertical-slice E2E**: upload → segments.
 
+### Phase 4.1 — PDF segmentation tightening
+
+- [x] Layout-aware PDF extraction via `pymupdf4llm` (Markdown output)
+- [x] Document-type-aware segmentation (`plain` vs `markdown`)
+- [x] PDF/Markdown: header-aware sections + paragraph reconstruction (no line-by-line fallback)
+- [x] Plain `.txt`: keep paragraph → line fallback for transcripts
+
+**Exit:** Simple PDFs produce coherent multi-sentence segments, not one line per chunk.
+
 ---
 
 ## Phase 5 — Planning stage
