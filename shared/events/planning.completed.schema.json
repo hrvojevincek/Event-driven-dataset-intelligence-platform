@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eventforge.dev/schemas/planning.completed.schema.json",
+  "title": "PlanningCompletedPayload",
+  "description": "Payload for eventforge.planning.completed — annotation tasks planned for the project.",
+  "type": "object",
+  "required": ["task_ids", "task_count"],
+  "properties": {
+    "task_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "minItems": 1,
+      "description": "Primary keys of annotation_tasks rows created during planning."
+    },
+    "task_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of annotation tasks to dispatch."
+    }
+  },
+  "additionalProperties": false
+}

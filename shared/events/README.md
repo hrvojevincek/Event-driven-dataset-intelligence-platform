@@ -6,45 +6,46 @@ Canonical event contracts shared between backend publishers, workers, and Step F
 
 ## Conventions
 
-- EventBridge `detail-type`: `eventforge.<domain>.<action>` (e.g. `eventforge.query.submitted`)
+- EventBridge `detail-type`: `eventforge.<domain>.<action>` (e.g. `eventforge.project.submitted`)
 - Envelope fields: `event_id`, `correlation_id`, `job_id`, `timestamp`, `schema_version`, `detail_type`, `payload`
 - JSON Schema in this directory; mirrored as Pydantic in `backend/src/eventforge/events/schemas/`
 
-## Incremental schema policy (mini-122)
+## Dataset platform pipeline (current)
 
-Define schemas **when the producer is implemented**, not all upfront:
+```
+project.submitted → intake.completed → preprocessing.completed → planning.completed
+  → annotation.task.dispatched (×N) → annotation.task.completed (×N)
+  → annotation.all_completed → export.completed
+```
 
-| When              | Schema                                                |
-| ----------------- | ----------------------------------------------------- |
-| KRE-122           | Shared envelope + `query.submitted`                   |
-| KRE-130           | `ingestion.completed`                                 |
-| Phase 2.2         | `embedding.completed`                                 |
-| Phase 2.2         | `knowledge.mined`                                     |
-| Phase 2.2         | `research.task.dispatched`, `research.task.completed` |
-| Phase 2.2         | `synthesis.completed`                                 |
-| Each later worker | That stage's output event                             |
-| Phase 2.3 (DLQ)   | `pipeline.failed` when terminal failure is recorded   |
+Physical SQS queue names are unchanged (`eventforge-ingestion`, `eventforge-embedding`, etc.) until Phase 9.
 
 ## Schema index
 
-| File                                   | Status           | Producer   | Consumer              |
-| -------------------------------------- | ---------------- | ---------- | --------------------- |
-| `envelope.schema.json`                 | Done (KRE-122)   | All        | All                   |
-| `query.submitted.schema.json`          | Done (KRE-122)   | API        | Ingestion worker      |
-| `ingestion.completed.schema.json`      | Done (KRE-130)   | Ingestion  | Embedding worker      |
-| `embedding.completed.schema.json`      | Done (Phase 2.2) | Embedding  | Knowledge worker      |
-| `knowledge.mined.schema.json`          | Done (Phase 2.2) | Knowledge  | Research orchestrator |
-| `research.task.dispatched.schema.json` | Done (Phase 2.2) | Research   | Research workers      |
-| `research.task.completed.schema.json`  | Done (Phase 2.2) | Research   | Synthesis             |
-| `synthesis.completed.schema.json`      | Done (Phase 2.2) | Synthesis  | API / SSE             |
-| `pipeline.failed.schema.json`          | Done (Phase 2.3) | DLQ worker | Alerting / SSE        |
+| File                                       | Status        | Producer                | Consumer                |
+| ------------------------------------------ | ------------- | ----------------------- | ----------------------- |
+| `envelope.schema.json`                     | Done          | All                     | All                     |
+| `project.submitted.schema.json`            | Done (pivot)  | API                     | Intake worker           |
+| `intake.completed.schema.json`             | Done (pivot)  | Intake                  | Preprocessing worker    |
+| `preprocessing.completed.schema.json`      | Done (pivot)  | Preprocessing           | Planning worker         |
+| `planning.completed.schema.json`           | Done (pivot)  | Planning                | Annotation orchestrator |
+| `annotation.task.dispatched.schema.json`   | Done (pivot)  | Annotation orchestrator | Annotation workers      |
+| `annotation.task.completed.schema.json`    | Done (pivot)  | Annotation              | Export worker           |
+| `annotation.all_completed.schema.json`     | Done (pivot)  | Annotation orchestrator | Export worker           |
+| `export.completed.schema.json`             | Done (pivot)  | Export                  | API / SSE               |
+| `pipeline.failed.schema.json`              | Done          | DLQ worker              | Alerting / SSE          |
 
-## Planned pipeline (reference)
+### Legacy (removed in Phase 7)
 
-```
-query.submitted → ingestion.completed → embedding.completed → knowledge.mined
-  → research.task.dispatched (×N) → research.task.completed (×N)
-  → synthesis.completed
-```
+| File                                   | Replaced by                              |
+| -------------------------------------- | ---------------------------------------- |
+| `query.submitted.schema.json`          | `project.submitted.schema.json`          |
+| `ingestion.completed.schema.json`      | `intake.completed.schema.json`           |
+| `embedding.completed.schema.json`      | `preprocessing.completed.schema.json`    |
+| `knowledge.mined.schema.json`          | `planning.completed.schema.json`         |
+| `research.task.dispatched.schema.json` | `annotation.task.dispatched.schema.json` |
+| `research.task.completed.schema.json`  | `annotation.task.completed.schema.json`  |
+| `research.all_completed.schema.json`   | `annotation.all_completed.schema.json`   |
+| `synthesis.completed.schema.json`      | `export.completed.schema.json`           |
 
-See `docs/ARCHITECTURE.md` §3 for sequence diagram.
+See `docs/DATASET_PLATFORM.md` and `docs/PIVOT_PLAN.md` for the full pivot plan.

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eventforge.dev/schemas/export.completed.schema.json",
+  "title": "ExportCompletedPayload",
+  "description": "Payload for eventforge.export.completed — JSONL export and QC report ready.",
+  "type": "object",
+  "required": ["export_id", "batch_count"],
+  "properties": {
+    "export_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Primary key of the dataset_exports row written during export."
+    },
+    "batch_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of annotation batches merged into the export."
+    },
+    "segment_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Optional count of labeled segments in the export."
+    }
+  },
+  "additionalProperties": false
+}

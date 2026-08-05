@@ -52,15 +52,15 @@ INGESTION_QUEUE_ARN="$(awslocal sqs get-queue-attributes \
   --output text)"
 
 awslocal events put-rule \
-  --name eventforge-query-submitted-to-ingestion \
+  --name eventforge-project-submitted-to-intake \
   --event-bus-name eventforge-bus \
-  --event-pattern '{"detail-type":["eventforge.query.submitted"]}' \
+  --event-pattern '{"detail-type":["eventforge.project.submitted"]}' \
   || true
 
 awslocal events put-targets \
-  --rule eventforge-query-submitted-to-ingestion \
+  --rule eventforge-project-submitted-to-intake \
   --event-bus-name eventforge-bus \
-  --targets "Id=ingestion-queue,Arn=${INGESTION_QUEUE_ARN}" \
+  --targets "Id=intake-queue,Arn=${INGESTION_QUEUE_ARN}" \
   || true
 
 EMBEDDING_QUEUE_URL="$(awslocal sqs get-queue-url --queue-name eventforge-embedding --query 'QueueUrl' --output text)"
@@ -71,15 +71,15 @@ EMBEDDING_QUEUE_ARN="$(awslocal sqs get-queue-attributes \
   --output text)"
 
 awslocal events put-rule \
-  --name eventforge-ingestion-completed-to-embedding \
+  --name eventforge-intake-completed-to-preprocessing \
   --event-bus-name eventforge-bus \
-  --event-pattern '{"detail-type":["eventforge.ingestion.completed"]}' \
+  --event-pattern '{"detail-type":["eventforge.intake.completed"]}' \
   || true
 
 awslocal events put-targets \
-  --rule eventforge-ingestion-completed-to-embedding \
+  --rule eventforge-intake-completed-to-preprocessing \
   --event-bus-name eventforge-bus \
-  --targets "Id=embedding-queue,Arn=${EMBEDDING_QUEUE_ARN}" \
+  --targets "Id=preprocessing-queue,Arn=${EMBEDDING_QUEUE_ARN}" \
   || true
 
 KNOWLEDGE_QUEUE_URL="$(awslocal sqs get-queue-url --queue-name eventforge-knowledge-mining --query 'QueueUrl' --output text)"
@@ -90,15 +90,15 @@ KNOWLEDGE_QUEUE_ARN="$(awslocal sqs get-queue-attributes \
   --output text)"
 
 awslocal events put-rule \
-  --name eventforge-embedding-completed-to-knowledge \
+  --name eventforge-preprocessing-completed-to-planning \
   --event-bus-name eventforge-bus \
-  --event-pattern '{"detail-type":["eventforge.embedding.completed"]}' \
+  --event-pattern '{"detail-type":["eventforge.preprocessing.completed"]}' \
   || true
 
 awslocal events put-targets \
-  --rule eventforge-embedding-completed-to-knowledge \
+  --rule eventforge-preprocessing-completed-to-planning \
   --event-bus-name eventforge-bus \
-  --targets "Id=knowledge-queue,Arn=${KNOWLEDGE_QUEUE_ARN}" \
+  --targets "Id=planning-queue,Arn=${KNOWLEDGE_QUEUE_ARN}" \
   || true
 
 RESEARCH_QUEUE_URL="$(awslocal sqs get-queue-url --queue-name eventforge-research --query 'QueueUrl' --output text)"
@@ -109,27 +109,27 @@ RESEARCH_QUEUE_ARN="$(awslocal sqs get-queue-attributes \
   --output text)"
 
 awslocal events put-rule \
-  --name eventforge-knowledge-mined-to-research \
+  --name eventforge-planning-completed-to-annotation \
   --event-bus-name eventforge-bus \
-  --event-pattern '{"detail-type":["eventforge.knowledge.mined"]}' \
+  --event-pattern '{"detail-type":["eventforge.planning.completed"]}' \
   || true
 
 awslocal events put-targets \
-  --rule eventforge-knowledge-mined-to-research \
+  --rule eventforge-planning-completed-to-annotation \
   --event-bus-name eventforge-bus \
-  --targets "Id=research-queue,Arn=${RESEARCH_QUEUE_ARN}" \
+  --targets "Id=annotation-orchestrator-queue,Arn=${RESEARCH_QUEUE_ARN}" \
   || true
 
 awslocal events put-rule \
-  --name eventforge-research-task-dispatched-to-research \
+  --name eventforge-annotation-task-dispatched-to-annotation \
   --event-bus-name eventforge-bus \
-  --event-pattern '{"detail-type":["eventforge.research.task.dispatched"]}' \
+  --event-pattern '{"detail-type":["eventforge.annotation.task.dispatched"]}' \
   || true
 
 awslocal events put-targets \
-  --rule eventforge-research-task-dispatched-to-research \
+  --rule eventforge-annotation-task-dispatched-to-annotation \
   --event-bus-name eventforge-bus \
-  --targets "Id=research-dispatch-queue,Arn=${RESEARCH_QUEUE_ARN}" \
+  --targets "Id=annotation-dispatch-queue,Arn=${RESEARCH_QUEUE_ARN}" \
   || true
 
 SYNTHESIS_QUEUE_URL="$(awslocal sqs get-queue-url --queue-name eventforge-synthesis --query 'QueueUrl' --output text)"
@@ -140,15 +140,27 @@ SYNTHESIS_QUEUE_ARN="$(awslocal sqs get-queue-attributes \
   --output text)"
 
 awslocal events put-rule \
-  --name eventforge-research-task-completed-to-synthesis \
+  --name eventforge-annotation-task-completed-to-export \
   --event-bus-name eventforge-bus \
-  --event-pattern '{"detail-type":["eventforge.research.task.completed"]}' \
+  --event-pattern '{"detail-type":["eventforge.annotation.task.completed"]}' \
   || true
 
 awslocal events put-targets \
-  --rule eventforge-research-task-completed-to-synthesis \
+  --rule eventforge-annotation-task-completed-to-export \
   --event-bus-name eventforge-bus \
-  --targets "Id=synthesis-queue,Arn=${SYNTHESIS_QUEUE_ARN}" \
+  --targets "Id=export-queue,Arn=${SYNTHESIS_QUEUE_ARN}" \
+  || true
+
+awslocal events put-rule \
+  --name eventforge-annotation-all-completed-to-export \
+  --event-bus-name eventforge-bus \
+  --event-pattern '{"detail-type":["eventforge.annotation.all_completed"]}' \
+  || true
+
+awslocal events put-targets \
+  --rule eventforge-annotation-all-completed-to-export \
+  --event-bus-name eventforge-bus \
+  --targets "Id=export-all-queue,Arn=${SYNTHESIS_QUEUE_ARN}" \
   || true
 
 echo "EventForge LocalStack resources initialized (DLQ redrive maxReceiveCount=${MAX_RECEIVE_COUNT})."

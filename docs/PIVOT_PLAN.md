@@ -43,7 +43,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 | ----- | ------------------- | -------------- |
 | 0     | Decisions & docs    | ✅ Done        |
 | 1     | Data model          | ✅ Done        |
-| 2     | Event contracts     | ⬜ Not started |
+| 2     | Event contracts     | ✅ Done        |
 | 3     | Intake stage        | ⬜ Not started |
 | 4     | Preprocessing stage | ⬜ Not started |
 | 5     | Planning stage      | ⬜ Not started |
@@ -55,7 +55,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 
 **Legend:** ⬜ Not started · 🟡 In progress · ✅ Done
 
-**Next:** Phase 2 — event contracts
+**Next:** Phase 3 — Intake stage
 
 ---
 
@@ -128,9 +128,9 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 | `research.all_completed`   | `annotation.all_completed`   | `shared/events/annotation.all_completed.schema.json`   |
 | `synthesis.completed`      | `export.completed`           | `shared/events/export.completed.schema.json`           |
 
-- [ ] JSON schemas in `shared/events/`
-- [ ] Pydantic models in `backend/src/eventforge/events/schemas/`
-- [ ] Update `infra/docker/localstack/init/01-eventforge.sh` routing rules
+- [x] JSON schemas in `shared/events/`
+- [x] Pydantic models in `backend/src/eventforge/events/schemas/`
+- [x] Update `infra/docker/localstack/init/01-eventforge.sh` routing rules
 - [ ] **Defer:** Terraform module updates (archived — no deploy)
 - [ ] **Defer:** physical SQS queue renames (keep `eventforge-embedding` queue name)
 

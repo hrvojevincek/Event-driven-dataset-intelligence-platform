@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eventforge.dev/schemas/annotation.all_completed.schema.json",
+  "title": "AnnotationAllCompletedPayload",
+  "description": "Payload for eventforge.annotation.all_completed — all annotation sub-tasks finished.",
+  "type": "object",
+  "required": ["task_count"],
+  "properties": {
+    "task_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of annotation sub-tasks that completed."
+    }
+  },
+  "additionalProperties": false
+}

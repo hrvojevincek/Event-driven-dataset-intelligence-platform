@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eventforge.dev/schemas/intake.completed.schema.json",
+  "title": "IntakeCompletedPayload",
+  "description": "Payload for eventforge.intake.completed — assets stored for the project.",
+  "type": "object",
+  "required": ["asset_ids", "asset_count"],
+  "properties": {
+    "asset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "minItems": 1,
+      "description": "Primary keys of assets rows written during intake."
+    },
+    "asset_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of assets ingested and persisted."
+    }
+  },
+  "additionalProperties": false
+}

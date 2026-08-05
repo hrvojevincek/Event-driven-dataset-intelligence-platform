@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eventforge.dev/schemas/annotation.task.dispatched.schema.json",
+  "title": "AnnotationTaskDispatchedPayload",
+  "description": "Payload for eventforge.annotation.task.dispatched — one parallel annotation sub-task.",
+  "type": "object",
+  "required": ["task_id", "task_index", "instructions", "segment_ids"],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Stable dispatch id for this annotation sub-task."
+    },
+    "task_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Zero-based index within the project's annotation fan-out."
+    },
+    "instructions": {
+      "type": "string",
+      "minLength": 1,
+      "description": "LLM instructions for labeling the assigned segments."
+    },
+    "segment_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "minItems": 1,
+      "description": "Segments this sub-task should annotate."
+    }
+  },
+  "additionalProperties": false
+}
