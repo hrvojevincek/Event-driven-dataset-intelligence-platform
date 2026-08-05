@@ -46,7 +46,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 | 2     | Event contracts     | ✅ Done        |
 | 3     | Intake stage        | ✅ Done        |
 | 4     | Preprocessing stage | ✅ Done        |
-| 5     | Planning stage      | ⬜ Not started |
+| 5     | Planning stage      | ✅ Done        |
 | 6     | Annotation stage    | ⬜ Not started |
 | 7     | Export stage        | ⬜ Not started |
 | 8     | Frontend pivot      | ⬜ Not started |
@@ -55,7 +55,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 
 **Legend:** ⬜ Not started · 🟡 In progress · ✅ Done
 
-**Next:** Phase 5 — Planning stage
+**Next:** Phase 6 — Annotation stage
 
 ---
 
@@ -182,10 +182,10 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 **Replaces:** `agents/knowledge.py`, entity extraction
 
-- [ ] `services/planning/schema_templates.py` — Support call + Document classification templates
-- [ ] `services/planning/task_builder.py` — merge template + override; batch segments into N tasks
-- [ ] `agents/planning.py` + `workers/planning.py`
-- [ ] Validate `schema_json` against template constraints
+- [x] `services/planning/schema_templates.py` — Support call + Document classification templates
+- [x] `services/planning/task_builder.py` — merge template + override; batch segments into N tasks
+- [x] `agents/planning.py` + `workers/planning.py`
+- [x] Validate `schema_json` against template constraints
 
 **Exit:** Segments → N `AnnotationTask` rows driven by chosen template.
 
