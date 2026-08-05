@@ -19,29 +19,22 @@ type ExportPreviewProps = {
 
 const PREVIEW_LINES = 5;
 
-export function ExportPreview({
+type ExportPreviewLoadedProps = {
+  projectId: string;
+  lineCount: number;
+};
+
+/** Fetches and shows JSONL preview once export exists (mounted only when ready). */
+function ExportPreviewLoaded({
   projectId,
-  detail,
-  jobStatus,
-  isLoading,
-}: ExportPreviewProps) {
+  lineCount,
+}: ExportPreviewLoadedProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
-
-  const hasExport = detail?.dataset_export != null;
-  const lineCount = detail?.dataset_export?.line_count ?? 0;
+  const [loadingPreview, setLoadingPreview] = useState(true);
 
   useEffect(() => {
-    if (!hasExport || jobStatus !== "completed") {
-      setPreview(null);
-      setPreviewError(null);
-      return;
-    }
-
     let cancelled = false;
-    setLoadingPreview(true);
-    setPreviewError(null);
 
     void fetchProjectExport(projectId)
       .then((content) => {
@@ -69,7 +62,55 @@ export function ExportPreview({
     return () => {
       cancelled = true;
     };
-  }, [hasExport, jobStatus, projectId]);
+  }, [projectId]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-mono">{lineCount}</span> labeled rows in JSONL
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          nativeButton={false}
+          render={
+            <a
+              href={projectExportDownloadUrl(projectId)}
+              download
+              rel="noopener noreferrer"
+            />
+          }
+        >
+          <Download data-icon="inline-start" />
+          Download JSONL
+        </Button>
+      </div>
+
+      {loadingPreview ? (
+        <p className="text-sm text-muted-foreground">Loading preview…</p>
+      ) : null}
+      {previewError ? (
+        <p className="text-sm text-destructive">{previewError}</p>
+      ) : null}
+      {preview ? (
+        <pre className="max-h-64 overflow-auto rounded-lg border border-border bg-muted/20 p-3 font-mono text-xs leading-relaxed">
+          {preview}
+        </pre>
+      ) : null}
+    </div>
+  );
+}
+
+export function ExportPreview({
+  projectId,
+  detail,
+  jobStatus,
+  isLoading,
+}: ExportPreviewProps) {
+  const hasExport = detail?.dataset_export != null;
+  const lineCount = detail?.dataset_export?.line_count ?? 0;
+  const exportReady = hasExport && jobStatus === "completed";
 
   if (isLoading && !detail) {
     return (
@@ -79,42 +120,21 @@ export function ExportPreview({
     );
   }
 
+  if (exportReady) {
+    return (
+      <ExportPreviewLoaded
+        key={projectId}
+        projectId={projectId}
+        lineCount={lineCount}
+      />
+    );
+  }
+
   if (hasExport) {
     return (
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            <span className="font-mono">{lineCount}</span> labeled rows in JSONL
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <a
-                href={projectExportDownloadUrl(projectId)}
-                download
-                rel="noopener noreferrer"
-              />
-            }
-          >
-            <Download data-icon="inline-start" />
-            Download JSONL
-          </Button>
-        </div>
-
-        {loadingPreview ? (
-          <p className="text-sm text-muted-foreground">Loading preview…</p>
-        ) : null}
-        {previewError ? (
-          <p className="text-sm text-destructive">{previewError}</p>
-        ) : null}
-        {preview ? (
-          <pre className="max-h-64 overflow-auto rounded-lg border border-border bg-muted/20 p-3 font-mono text-xs leading-relaxed">
-            {preview}
-          </pre>
-        ) : null}
-      </div>
+      <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+        JSONL preview and download appear when export completes.
+      </p>
     );
   }
 
