@@ -18,6 +18,7 @@ from eventforge.db.models.base import (
 )
 
 # Deprecated aliases — removed when legacy agent code is deleted (Phase 3+).
+Project = Job
 Source = Asset
 DocumentChunk = Segment
 KnowledgeEntity = AnnotationTask
@@ -40,6 +41,7 @@ __all__ = [
     "LLMUsage",
     "PIPELINE_STAGE_NAMES",
     "ProcessedEvent",
+    "Project",
     "ResearchNote",
     "Segment",
     "Source",

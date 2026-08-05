@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     llm_max_output_tokens: int = 4096
     preprocessing_segment_size_tokens: int = 512
     preprocessing_segment_overlap_tokens: int = 50
+    planning_segments_per_task: int | None = None
     knowledge_rag_top_k: int = 10
     knowledge_max_entities: int = 4
     research_rag_top_k: int = 8
@@ -120,6 +121,14 @@ class Settings(BaseSettings):
     def _positive_cost_cap(cls, value: Decimal | None) -> Decimal | None:
         if value is not None and value <= 0:
             msg = "must be > 0 when set"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("planning_segments_per_task")
+    @classmethod
+    def _positive_planning_batch(cls, value: int | None) -> int | None:
+        if value is not None and value < 1:
+            msg = "must be >= 1 when set"
             raise ValueError(msg)
         return value
 
