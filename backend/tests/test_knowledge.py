@@ -176,23 +176,15 @@ async def test_process_embedding_completed_writes_entities_and_updates_stage(
     )
     assert entity_count == 3
 
-    topic_entity = await db_session.scalar(
-        select(KnowledgeEntity).where(
-            KnowledgeEntity.job_id == job.id,
-            KnowledgeEntity.entity_type == "topic",
-        )
-    )
-    assert topic_entity is not None
+    from eventforge.db.repositories import KnowledgeEntityRepository
+
+    entities = await KnowledgeEntityRepository(db_session).list_by_job_id(job.id)
+    topic_entity = next(entity for entity in entities if entity.entity_type == "topic")
     assert topic_entity.name == job.topic
     assert topic_entity.chunk_id is None
 
-    concept_names = await db_session.scalars(
-        select(KnowledgeEntity.name).where(
-            KnowledgeEntity.job_id == job.id,
-            KnowledgeEntity.entity_type == "concept",
-        )
-    )
-    assert set(concept_names.all()) == {"knowledge graphs", "entity extraction"}
+    concept_names = {entity.name for entity in entities if entity.entity_type == "concept"}
+    assert concept_names == {"knowledge graphs", "entity extraction"}
 
     processed = ProcessedEventRepository(db_session)
     record = await processed.get_by_event_id(str(inbound.event_id))

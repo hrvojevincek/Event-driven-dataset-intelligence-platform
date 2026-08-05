@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ from eventforge.db.models import (
     StageStatus,
     User,
 )
+from eventforge.db.models.legacy_compat import job_legacy_meta
 from eventforge.db.repositories import (
     JobRepository,
     LLMUsageRepository,
@@ -62,7 +64,14 @@ async def submit_query(
         user_id=user.id,
         correlation_id=correlation_id,
         name=topic,
-        schema_json="{}",
+        schema_json=json.dumps(
+            {
+                "_legacy": {
+                    "depth": depth.value,
+                    "max_sources": max_sources,
+                }
+            }
+        ),
         status=JobStatus.PENDING.value,
     )
     session.add(job)
@@ -117,13 +126,14 @@ _STAGE_ORDER = {stage.value: index for index, stage in enumerate(PIPELINE_STAGE_
 
 
 def _job_to_summary_response(job: Job) -> QuerySummaryResponse:
+    legacy = job_legacy_meta(job.schema_json)
     return QuerySummaryResponse(
         job_id=job.id,
         correlation_id=job.correlation_id,
         topic=job.name,
-        depth="standard",
+        depth=legacy.get("depth", "standard"),
         status=job.status,
-        max_sources=None,
+        max_sources=legacy.get("max_sources"),
         created_at=job.created_at,
         updated_at=job.updated_at,
     )
@@ -167,13 +177,14 @@ def _job_to_detail_response(
             content=job.dataset_export.export_content,
             created_at=job.dataset_export.created_at,
         )
+    legacy = job_legacy_meta(job.schema_json)
     return QueryDetailResponse(
         job_id=job.id,
         correlation_id=job.correlation_id,
         topic=job.name,
-        depth="standard",
+        depth=legacy.get("depth", "standard"),
         status=job.status,
-        max_sources=None,
+        max_sources=legacy.get("max_sources"),
         created_at=job.created_at,
         updated_at=job.updated_at,
         stages=[

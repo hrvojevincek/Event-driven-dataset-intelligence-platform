@@ -98,10 +98,12 @@ def build_knowledge_entities(
             chunk_id=None,
             name=job.topic[:512],
             entity_type="topic",
+            task_index=0,
         )
     ]
 
     chunk_by_index = {index: chunk for index, chunk in enumerate(retrieved_chunks)}
+    next_index = 1
     for item in extracted_items:
         if item.name.strip().lower() == job.topic.strip().lower() and item.entity_type == "topic":
             continue
@@ -118,8 +120,10 @@ def build_knowledge_entities(
                 chunk_id=chunk_id,
                 name=item.name[:512],
                 entity_type=item.entity_type[:64],
+                task_index=next_index,
             )
         )
+        next_index += 1
 
         if len(entities) >= max_entities:
             break

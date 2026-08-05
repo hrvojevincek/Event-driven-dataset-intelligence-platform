@@ -6,7 +6,15 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from eventforge.core.config import Settings, get_settings
-from eventforge.db.models import Job, JobStageName, JobStatus, StageStatus, User
+from eventforge.db.models import (
+    PIPELINE_STAGE_NAMES,
+    Job,
+    JobStage,
+    JobStageName,
+    JobStatus,
+    StageStatus,
+    User,
+)
 from eventforge.db.repositories import LLMUsageRepository
 from eventforge.db.session import reset_engine
 from eventforge.events.publisher import EventPublisher
@@ -33,13 +41,17 @@ async def db_session() -> AsyncSession:
 
 
 async def _seed_job(db_session: AsyncSession) -> Job:
-    user = User(email="cost-cap@example.com", auth_subject_id="cost-cap-user")
+    suffix = uuid.uuid4().hex[:8]
+    user = User(
+        email=f"cost-cap-{suffix}@example.com",
+        auth_subject_id=f"cost-cap-user-{suffix}",
+    )
     db_session.add(user)
     await db_session.flush()
 
     job = Job(
         user_id=user.id,
-        correlation_id="corr-cost-cap",
+        correlation_id=f"corr-cost-cap-{suffix}",
         topic="Cost cap enforcement",
         depth="standard",
         status=JobStatus.RUNNING.value,
@@ -81,11 +93,10 @@ async def test_assert_job_under_cost_cap_skipped_when_unconfigured(
 
 @pytest.mark.asyncio
 async def test_emit_cost_cap_pipeline_failure_marks_job_failed(db_session: AsyncSession) -> None:
-    from eventforge.db.models import JobStage
     from eventforge.db.repositories import JobRepository, JobStageRepository
 
     job = await _seed_job(db_session)
-    for stage_name in JobStageName:
+    for stage_name in PIPELINE_STAGE_NAMES:
         db_session.add(
             JobStage(
                 job_id=job.id,

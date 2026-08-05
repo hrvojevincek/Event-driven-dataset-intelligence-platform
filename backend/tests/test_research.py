@@ -137,12 +137,14 @@ async def _seed_job_with_entities(
             chunk_id=None,
             name=job.topic,
             entity_type="topic",
+            task_index=0,
         ),
         KnowledgeEntity(
             job_id=job.id,
             chunk_id=None,
             name="concept alpha",
             entity_type="concept",
+            task_index=1,
         ),
     ]
     db_session.add_all(entities)
