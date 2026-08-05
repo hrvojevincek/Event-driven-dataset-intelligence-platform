@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
-import { QueryHistory } from "@/components/dashboard/query-history";
+import { ProjectHistory } from "@/components/dashboard/project-history";
 import Link from "next/link";
-import { ArrowRight, GitBranch, Layers, Zap } from "lucide-react";
+import { ArrowRight, FileJson, GitBranch, Layers } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,11 +13,11 @@ import {
 } from "@/components/ui/card";
 
 const stages = [
-  "Ingestion",
-  "Embedding",
-  "Knowledge",
-  "Research",
-  "Synthesis",
+  "Intake",
+  "Preprocessing",
+  "Planning",
+  "Annotation",
+  "Export",
 ];
 
 export default function HomePage() {
@@ -25,61 +25,55 @@ export default function HomePage() {
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 p-6 md:p-10">
       <section className="space-y-4">
         <Badge variant="secondary" className="font-mono text-[10px] uppercase">
-          Event-driven research
+          Dataset intelligence
         </Badge>
         <div className="max-w-2xl space-y-3">
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            Multi-agent research, orchestrated by events
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            Files in, labeled JSONL out
           </h1>
-          <p className="text-base leading-relaxed text-muted-foreground">
-            Submit a topic and watch an async pipeline ingest sources, embed
-            knowledge, run parallel research agents, and deliver a cited
-            synthesis — with live pipeline visibility in React Flow.
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Upload documents or transcripts, pick an annotation schema, and watch
+            an event-driven pipeline extract segments, label them in parallel, and
+            deliver JSONL with QC metrics — live in React Flow.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button nativeButton={false} render={<Link href="/queries/new" />}>
-            Start a query
+          <Button nativeButton={false} render={<Link href="/projects/new" />}>
+            New project
             <ArrowRight data-icon="inline-end" />
-          </Button>
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href="/queries/demo" />}
-          >
-            View sample job
           </Button>
         </div>
       </section>
 
-      <QueryHistory />
+      <ProjectHistory />
 
       <section className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <Zap className="mb-1 size-4 text-primary" />
-            <CardTitle>Async pipeline</CardTitle>
+            <Layers className="mb-1 size-4 text-primary" />
+            <CardTitle>Schema templates</CardTitle>
             <CardDescription>
-              EventBridge stages with idempotency, DLQ, and correlation tracing.
+              Support-call and document-classification presets with optional JSON
+              override.
             </CardDescription>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <Layers className="mb-1 size-4 text-secondary" />
-            <CardTitle>Real AI agents</CardTitle>
+            <FileJson className="mb-1 size-4 text-secondary" />
+            <CardTitle>JSONL + QC</CardTitle>
             <CardDescription>
-              Tavily ingestion, RAG knowledge mining, parallel LLM research,
-              cited synthesis.
+              Coverage, compliance, confidence flags, and downloadable labeled
+              rows with provenance.
             </CardDescription>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
             <GitBranch className="mb-1 size-4 text-primary" />
-            <CardTitle>Live dashboard</CardTitle>
+            <CardTitle>Live pipeline</CardTitle>
             <CardDescription>
-              SSE-driven React Flow updates as each stage completes.
+              SSE-driven React Flow as intake → export stages complete.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -88,9 +82,9 @@ export default function HomePage() {
       <section className="space-y-4">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-lg font-medium">Pipeline stages</h2>
+            <h2 className="text-base font-medium">Pipeline stages</h2>
             <p className="text-sm text-muted-foreground">
-              Five stages from query submission to cited report.
+              Five stages from upload to labeled export.
             </p>
           </div>
         </div>

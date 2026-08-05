@@ -30,8 +30,7 @@ settings = get_settings()
 @pytest.fixture
 async def db_session() -> AsyncSession:
     reset_engine()
-    engine = create_async_engine(
-        settings.async_database_url, pool_pre_ping=True)
+    engine = create_async_engine(settings.async_database_url, pool_pre_ping=True)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session:
         yield session
@@ -42,8 +41,7 @@ async def db_session() -> AsyncSession:
 
 async def _seed_job_with_stages(db_session: AsyncSession) -> Job:
     suffix = uuid.uuid4().hex[:8]
-    user = User(email=f"fail-{suffix}@example.com",
-                auth_subject_id=f"fail-user-{suffix}")
+    user = User(email=f"fail-{suffix}@example.com", auth_subject_id=f"fail-user-{suffix}")
     db_session.add(user)
     await db_session.flush()
 
@@ -70,8 +68,7 @@ async def _seed_job_with_stages(db_session: AsyncSession) -> Job:
 
 
 def test_stage_for_failed_detail_type_maps_project_submitted_to_intake() -> None:
-    assert stage_for_failed_detail_type(
-        "eventforge.project.submitted") == JobStageName.INTAKE.value
+    assert stage_for_failed_detail_type("eventforge.project.submitted") == JobStageName.INTAKE.value
 
 
 def test_parse_failed_event_detail_validates_envelope() -> None:
@@ -88,7 +85,8 @@ def test_parse_failed_event_detail_validates_envelope() -> None:
 
 
 async def test_process_pipeline_failure_marks_job_and_stage_failed(
-        db_session: AsyncSession) -> None:
+    db_session: AsyncSession,
+) -> None:
     job = await _seed_job_with_stages(db_session)
     failed_event = build_project_submitted_event(
         job_id=job.id,
@@ -114,8 +112,7 @@ async def test_process_pipeline_failure_marks_job_and_stage_failed(
     assert result.payload.error_message == "Worker crashed"
     assert result.payload.source_queue == "eventforge-ingestion"
     assert result.payload.receive_count == 3
-    assert result.event_id == deterministic_pipeline_failed_event_id(
-        job.id, failed_event.event_id)
+    assert result.event_id == deterministic_pipeline_failed_event_id(job.id, failed_event.event_id)
 
     await db_session.refresh(job)
     stage_repo = JobStageRepository(db_session)
@@ -127,8 +124,7 @@ async def test_process_pipeline_failure_marks_job_and_stage_failed(
     publisher.publish.assert_awaited_once()
 
 
-async def test_process_pipeline_failure_is_idempotent(
-        db_session: AsyncSession) -> None:
+async def test_process_pipeline_failure_is_idempotent(db_session: AsyncSession) -> None:
     job = await _seed_job_with_stages(db_session)
     failed_event = parse_failed_event_detail(
         json.loads(
@@ -235,7 +231,7 @@ async def test_dlq_worker_deletes_message_on_success() -> None:
     worker.handle_message = AsyncMock()
     worker._delete_message = MagicMock()
 
-    with patch.object(worker, "_receive_messages", return_value=[message]):
+    with patch.object(worker, "_receive_messages", return_value=([message], False)):
         processed = await worker.poll_once()
 
     assert processed == 1

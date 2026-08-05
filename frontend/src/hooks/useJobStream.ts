@@ -100,7 +100,7 @@ export function useJobStream(jobId: string): UseJobStreamState {
         return;
       }
 
-      const url = `${getApiBaseUrl()}/api/v1/queries/${jobId}/stream`;
+      const url = `${getApiBaseUrl()}/api/v1/projects/${jobId}/stream`;
 
       try {
         setState((previous) => ({ ...previous, connected: true, error: null }));

@@ -26,6 +26,8 @@ services:
       SERVICES: events,sqs,stepfunctions,s3,secretsmanager
       DEBUG: ${LOCALSTACK_DEBUG:-0}
       PERSISTENCE: 1
+      SQS_QUEUE_PREFIX: ${SQS_QUEUE_PREFIX:-eventforge}
+      SQS_MAX_RECEIVE_COUNT: ${SQS_MAX_RECEIVE_COUNT:-3}
     volumes:
       - localstack_data:/var/lib/localstack
       - ./infra/docker/localstack/init:/etc/localstack/init/ready.d
@@ -39,6 +41,9 @@ services:
       POSTGRES_HOST: postgres
       AWS_ENDPOINT_URL: http://localstack:4566
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      UPLOAD_ROOT: data/uploads
+    volumes:
+      - ./backend/data/uploads:/app/data/uploads
     depends_on:
       postgres:
         condition: service_healthy

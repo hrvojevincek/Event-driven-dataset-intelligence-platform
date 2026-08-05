@@ -55,7 +55,7 @@ export function PipelineNode({ data, selected }: NodeProps) {
       >
         <div className="flex items-center gap-2">
           <StatusIcon status={status} />
-          <span className="text-base font-medium leading-tight">{label}</span>
+          <span className="text-sm font-medium leading-tight">{label}</span>
         </div>
         <div className="flex flex-col gap-2">
           <p className="mt-1 truncate font-mono text-sm uppercase tracking-wide text-muted-foreground">

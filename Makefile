@@ -25,9 +25,11 @@ verify-fullstack: ## Full-stack scaffold smoke test (requires make dev / compose
 	./scripts/verify-fullstack.sh
 
 workers: ## Start all SQS workers via Honcho (Procfile)
+	./scripts/wait-localstack.sh
 	uv run --project backend honcho start -f Procfile
 
 workers-overmind: ## Start all SQS workers via Overmind (brew install overmind)
+	./scripts/wait-localstack.sh
 	overmind start -f Procfile
 
 test: ## Run backend + frontend tests

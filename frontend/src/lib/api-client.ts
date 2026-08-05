@@ -1,4 +1,4 @@
-import type { paths } from "@/types/api";
+import type { components, paths } from "@/types/api";
 
 export class ApiError extends Error {
   constructor(
@@ -60,41 +60,75 @@ export async function apiFetch<T>(
 export type HealthResponse =
   paths["/health"]["get"]["responses"][200]["content"]["application/json"];
 
-export type QuerySummary =
-  paths["/api/v1/queries"]["get"]["responses"][200]["content"]["application/json"][number];
+export type ProjectSummary =
+  paths["/api/v1/projects"]["get"]["responses"][200]["content"]["application/json"][number];
 
-export type QueryDetail =
-  paths["/api/v1/queries/{job_id}"]["get"]["responses"][200]["content"]["application/json"];
+export type ProjectDetail =
+  paths["/api/v1/projects/{project_id}"]["get"]["responses"][200]["content"]["application/json"];
 
-export type SubmitQueryRequest =
-  paths["/api/v1/queries"]["post"]["requestBody"]["content"]["application/json"];
+export type SubmitProjectResponse =
+  paths["/api/v1/projects"]["post"]["responses"][201]["content"]["application/json"];
 
-export type SubmitQueryResponse =
-  paths["/api/v1/queries"]["post"]["responses"][201]["content"]["application/json"];
+export type QCReport = components["schemas"]["QCReportResponse"];
 
 export async function getHealth(): Promise<HealthResponse> {
   return apiFetch<HealthResponse>("/health");
 }
 
-export async function listQueries(): Promise<QuerySummary[]> {
-  return apiFetch<QuerySummary[]>("/api/v1/queries");
+export async function listProjects(): Promise<ProjectSummary[]> {
+  return apiFetch<ProjectSummary[]>("/api/v1/projects");
 }
 
-export async function getQueryDetail(jobId: string): Promise<QueryDetail> {
-  return apiFetch<QueryDetail>(`/api/v1/queries/${jobId}`);
+export async function getProjectDetail(projectId: string): Promise<ProjectDetail> {
+  return apiFetch<ProjectDetail>(`/api/v1/projects/${projectId}`);
 }
 
-export async function submitQuery(
-  body: SubmitQueryRequest,
-): Promise<SubmitQueryResponse> {
-  return apiFetch<SubmitQueryResponse>("/api/v1/queries", {
+export async function submitProject(formData: FormData): Promise<SubmitProjectResponse> {
+  const url = `${getApiBaseUrl()}/api/v1/projects`;
+  const response = await fetch(url, {
     method: "POST",
-    body: JSON.stringify(body),
+    body: formData,
   });
+
+  if (!response.ok) {
+    let body: unknown;
+    try {
+      body = await parseJson(response);
+    } catch {
+      body = undefined;
+    }
+    throw new ApiError(
+      `API ${response.status}: ${response.statusText}`,
+      response.status,
+      body,
+    );
+  }
+
+  return parseJson<SubmitProjectResponse>(response);
 }
 
-export async function deleteQuery(jobId: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/queries/${jobId}`, {
+export async function deleteProject(projectId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/projects/${projectId}`, {
     method: "DELETE",
   });
+}
+
+export async function fetchProjectExport(projectId: string): Promise<string> {
+  const url = `${getApiBaseUrl()}/api/v1/projects/${projectId}/export`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new ApiError(
+      `API ${response.status}: ${response.statusText}`,
+      response.status,
+    );
+  }
+  return response.text();
+}
+
+export async function fetchProjectQcReport(projectId: string): Promise<QCReport> {
+  return apiFetch<QCReport>(`/api/v1/projects/${projectId}/export?format=qc`);
+}
+
+export function projectExportDownloadUrl(projectId: string): string {
+  return `${getApiBaseUrl()}/api/v1/projects/${projectId}/export`;
 }

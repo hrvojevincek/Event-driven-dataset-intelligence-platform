@@ -38,43 +38,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/queries": {
+    "/api/v1/projects": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List User Queries */
-        get: operations["list_user_queries_api_v1_queries_get"];
+        /** List User Projects */
+        get: operations["list_user_projects_api_v1_projects_get"];
         put?: never;
-        /** Create Query */
-        post: operations["create_query_api_v1_queries_post"];
+        /** Create Project */
+        post: operations["create_project_api_v1_projects_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/queries/{job_id}": {
+    "/api/v1/projects/{project_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Query */
-        get: operations["get_query_api_v1_queries__job_id__get"];
+        /** Get Project */
+        get: operations["get_project_api_v1_projects__project_id__get"];
         put?: never;
         post?: never;
-        /** Remove Query */
-        delete: operations["remove_query_api_v1_queries__job_id__delete"];
+        /** Remove Project */
+        delete: operations["remove_project_api_v1_projects__project_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/queries/{job_id}/stream": {
+    "/api/v1/projects/{project_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Project Export */
+        get: operations["download_project_export_api_v1_projects__project_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/stream": {
         parameters: {
             query?: never;
             header?: never;
@@ -82,10 +99,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Stream Query Events
+         * Stream Project Events
          * @description Stream pipeline stage updates for a job via Server-Sent Events.
          */
-        get: operations["stream_query_events_api_v1_queries__job_id__stream_get"];
+        get: operations["stream_project_events_api_v1_projects__project_id__stream_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -115,6 +132,65 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AssetResponse
+         * @description Uploaded file registered during intake.
+         */
+        AssetResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Filename */
+            filename: string;
+            /** Mime Type */
+            mime_type: string;
+            /** Byte Size */
+            byte_size: number | null;
+            /** Fetch Status */
+            fetch_status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** Body_create_project_api_v1_projects_post */
+        Body_create_project_api_v1_projects_post: {
+            /** Name */
+            name: string;
+            /** Files */
+            files: string[];
+            /** Schema Template */
+            schema_template?: string | null;
+            /** Schema Json Override */
+            schema_json_override?: string | null;
+            /**
+             * Domain
+             * @default documents
+             */
+            domain: string;
+        };
+        /**
+         * DatasetExportSummaryResponse
+         * @description Export metadata without the full JSONL payload.
+         */
+        DatasetExportSummaryResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Line Count */
+            line_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            qc_report: components["schemas"]["QCReportResponse"];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -122,7 +198,7 @@ export interface components {
         };
         /**
          * JobStageResponse
-         * @description One pipeline stage and its execution status.
+         * @description One pipeline stage row for SSE snapshots.
          */
         JobStageResponse: {
             /** Stage */
@@ -130,17 +206,17 @@ export interface components {
             /** Status */
             status: string;
             /** Started At */
-            started_at: string | null;
+            started_at?: string | null;
             /** Completed At */
-            completed_at: string | null;
+            completed_at?: string | null;
             /** Duration Ms */
-            duration_ms: number | null;
+            duration_ms?: number | null;
             /** Error Detail */
-            error_detail: string | null;
+            error_detail?: string | null;
         };
         /**
          * LLMUsageCallResponse
-         * @description One logged LLM call for a job.
+         * @description One logged LLM call for a project.
          */
         LLMUsageCallResponse: {
             /**
@@ -166,7 +242,7 @@ export interface components {
         };
         /**
          * LLMUsageSummaryResponse
-         * @description Aggregated LLM cost and per-call breakdown for a job.
+         * @description Aggregated LLM cost and per-call breakdown for a project.
          */
         LLMUsageSummaryResponse: {
             /** Total Cost Usd */
@@ -175,16 +251,10 @@ export interface components {
             calls: components["schemas"]["LLMUsageCallResponse"][];
         };
         /**
-         * QueryDepth
-         * @description Research depth preset controlling source count and thoroughness.
-         * @enum {string}
+         * ProjectDetailResponse
+         * @description Full project detail including stages, assets, and optional export.
          */
-        QueryDepth: "quick" | "standard" | "deep";
-        /**
-         * QueryDetailResponse
-         * @description Full job detail including stages and optional synthesis report.
-         */
-        QueryDetailResponse: {
+        ProjectDetailResponse: {
             /**
              * Job Id
              * Format: uuid
@@ -192,14 +262,16 @@ export interface components {
             job_id: string;
             /** Correlation Id */
             correlation_id: string;
-            /** Topic */
-            topic: string;
-            /** Depth */
-            depth: string;
+            /** Name */
+            name: string;
+            /** Schema Template */
+            schema_template: string | null;
+            /** Domain */
+            domain: string;
             /** Status */
             status: string;
-            /** Max Sources */
-            max_sources: number | null;
+            /** Label Schema Json */
+            label_schema_json: string;
             /**
              * Created At
              * Format: date-time
@@ -212,16 +284,16 @@ export interface components {
             updated_at: string;
             /** Stages */
             stages: components["schemas"]["JobStageResponse"][];
-            /** Sources */
-            sources?: components["schemas"]["SourceResponse"][];
-            synthesis_report?: components["schemas"]["SynthesisReportResponse"] | null;
+            /** Assets */
+            assets?: components["schemas"]["AssetResponse"][];
+            dataset_export?: components["schemas"]["DatasetExportSummaryResponse"] | null;
             llm_usage: components["schemas"]["LLMUsageSummaryResponse"];
         };
         /**
-         * QuerySummaryResponse
-         * @description Lightweight job summary for list endpoints.
+         * ProjectSummaryResponse
+         * @description Lightweight project summary for list endpoints.
          */
-        QuerySummaryResponse: {
+        ProjectSummaryResponse: {
             /**
              * Job Id
              * Format: uuid
@@ -229,14 +301,16 @@ export interface components {
             job_id: string;
             /** Correlation Id */
             correlation_id: string;
-            /** Topic */
-            topic: string;
-            /** Depth */
-            depth: string;
+            /** Name */
+            name: string;
+            /** Schema Template */
+            schema_template: string | null;
+            /** Domain */
+            domain: string;
             /** Status */
             status: string;
-            /** Max Sources */
-            max_sources: number | null;
+            /** Asset Count */
+            asset_count: number;
             /**
              * Created At
              * Format: date-time
@@ -249,44 +323,32 @@ export interface components {
             updated_at: string;
         };
         /**
-         * SourceResponse
-         * @description Web source discovered during ingestion.
+         * QCReportResponse
+         * @description Quality-control summary for a completed export.
          */
-        SourceResponse: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Url */
-            url: string;
-            /** Title */
-            title: string;
-            /** Snippet */
-            snippet: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
+        QCReportResponse: {
+            /** Coverage Pct */
+            coverage_pct: number;
+            /** Schema Compliance Pct */
+            schema_compliance_pct: number;
+            /** Low Confidence Segment Ids */
+            low_confidence_segment_ids: string[];
+            /** Total Cost Usd */
+            total_cost_usd: number;
+            /** Segment Count */
+            segment_count: number;
+            /** Labeled Count */
+            labeled_count: number;
+            /** Batch Count */
+            batch_count: number;
+            /** Flags */
+            flags: string[];
         };
         /**
-         * SubmitQueryRequest
-         * @description HTTP body for POST /api/v1/queries.
+         * SubmitProjectResponse
+         * @description Response after a project is accepted and queued for intake.
          */
-        SubmitQueryRequest: {
-            /** Topic */
-            topic: string;
-            /** @default standard */
-            depth: components["schemas"]["QueryDepth"];
-            /** Max Sources */
-            max_sources?: number | null;
-        };
-        /**
-         * SubmitQueryResponse
-         * @description HTTP response after a query is accepted into the pipeline.
-         */
-        SubmitQueryResponse: {
+        SubmitProjectResponse: {
             /**
              * Job Id
              * Format: uuid
@@ -294,24 +356,8 @@ export interface components {
             job_id: string;
             /** Correlation Id */
             correlation_id: string;
-        };
-        /**
-         * SynthesisReportResponse
-         * @description Final report produced by the synthesis stage.
-         */
-        SynthesisReportResponse: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Content */
-            content: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
+            /** Asset Count */
+            asset_count: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -379,7 +425,7 @@ export interface operations {
             };
         };
     };
-    list_user_queries_api_v1_queries_get: {
+    list_user_projects_api_v1_projects_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -394,12 +440,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["QuerySummaryResponse"][];
+                    "application/json": components["schemas"]["ProjectSummaryResponse"][];
                 };
             };
         };
     };
-    create_query_api_v1_queries_post: {
+    create_project_api_v1_projects_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -408,7 +454,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SubmitQueryRequest"];
+                "multipart/form-data": components["schemas"]["Body_create_project_api_v1_projects_post"];
             };
         };
         responses: {
@@ -418,7 +464,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SubmitQueryResponse"];
+                    "application/json": components["schemas"]["SubmitProjectResponse"];
                 };
             };
             /** @description Validation Error */
@@ -432,12 +478,12 @@ export interface operations {
             };
         };
     };
-    get_query_api_v1_queries__job_id__get: {
+    get_project_api_v1_projects__project_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                job_id: string;
+                project_id: string;
             };
             cookie?: never;
         };
@@ -449,7 +495,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["QueryDetailResponse"];
+                    "application/json": components["schemas"]["ProjectDetailResponse"];
                 };
             };
             /** @description Validation Error */
@@ -463,12 +509,12 @@ export interface operations {
             };
         };
     };
-    remove_query_api_v1_queries__job_id__delete: {
+    remove_project_api_v1_projects__project_id__delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                job_id: string;
+                project_id: string;
             };
             cookie?: never;
         };
@@ -492,12 +538,45 @@ export interface operations {
             };
         };
     };
-    stream_query_events_api_v1_queries__job_id__stream_get: {
+    download_project_export_api_v1_projects__project_id__export_get: {
+        parameters: {
+            query?: {
+                format?: string;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_project_events_api_v1_projects__project_id__stream_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                job_id: string;
+                project_id: string;
             };
             cookie?: never;
         };

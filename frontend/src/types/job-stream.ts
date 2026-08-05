@@ -25,11 +25,11 @@ export type JobStreamEvent = {
 };
 
 export const PIPELINE_STAGES = [
-  { id: "ingestion", label: "Ingestion" },
-  { id: "embedding", label: "Embedding" },
-  { id: "knowledge_mining", label: "Knowledge" },
-  { id: "research", label: "Research" },
-  { id: "synthesis", label: "Synthesis" },
+  { id: "intake", label: "Intake" },
+  { id: "preprocessing", label: "Preprocessing" },
+  { id: "planning", label: "Planning" },
+  { id: "annotation", label: "Annotation" },
+  { id: "export", label: "Export" },
 ] as const;
 
 export function stageLabel(stageId: string): string {

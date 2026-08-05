@@ -49,13 +49,13 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 | 5     | Planning stage      | ✅ Done        |
 | 6     | Annotation stage    | ✅ Done        |
 | 7     | Export stage        | ✅ Done        |
-| 8     | Frontend pivot      | ⬜ Not started |
+| 8     | Frontend pivot      | ✅ Done        |
 | 9     | Local infra cleanup | ⬜ Not started |
 | 10    | Polish & portfolio  | ⬜ Not started |
 
 **Legend:** ⬜ Not started · 🟡 In progress · ✅ Done
 
-**Next:** Phase 8 — Frontend pivot
+**Next:** Phase 9 — Local infra cleanup
 
 ---
 
@@ -223,11 +223,11 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 **Demo UX:** 60% pipeline animation / 40% QC + export panel.
 
-- [ ] New `PIPELINE_STAGES` + agent names in `job-stream.ts` / `stage-agents.ts`
-- [ ] `/projects/new` — file upload + template picker + optional JSON editor
-- [ ] `/projects/[id]` — React Flow + **QC panel** (coverage, flags) + JSONL preview + download
-- [ ] Remove synthesis markdown viewer; remove query submit form
-- [ ] Landing page copy — dataset intelligence platform
+- [x] New `PIPELINE_STAGES` + agent names in `job-stream.ts` / `stage-agents.ts`
+- [x] `/projects/new` — file upload + template picker + optional JSON editor
+- [x] `/projects/[id]` — React Flow + **QC panel** (coverage, flags) + JSONL preview + download
+- [x] Remove synthesis markdown viewer; remove query submit form
+- [x] Landing page copy — dataset intelligence platform
 
 **Exit:** 5-minute demo path works in browser.
 

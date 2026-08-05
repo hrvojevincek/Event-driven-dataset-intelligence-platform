@@ -45,14 +45,30 @@ class LocalStorage:
         project_dir.mkdir(parents=True, exist_ok=True)
         target = project_dir / safe_name
         target.write_bytes(content)
-        storage_uri = target.resolve().as_uri()
+        # Relative URI so host workers and container API share the same upload_root mount.
+        storage_uri = f"{project_id}/{safe_name}"
         return target, storage_uri
 
     def resolve_path(self, storage_uri: str) -> Path:
-        """Map a ``file://`` storage URI back to a local path."""
+        """Map a storage URI to a local path under upload_root."""
         if storage_uri.startswith("file://"):
-            return Path(storage_uri.removeprefix("file://"))
-        return Path(storage_uri)
+            raw = Path(storage_uri.removeprefix("file://"))
+            if raw.is_file():
+                return raw
+            return self._remap_legacy_container_path(storage_uri) or raw
+        candidate = self._root / storage_uri
+        if candidate.is_file():
+            return candidate
+        return self._remap_legacy_container_path(storage_uri) or candidate
+
+    def _remap_legacy_container_path(self, storage_uri: str) -> Path | None:
+        """Map Docker API paths (file:///app/data/uploads/...) onto local upload_root."""
+        marker = "/data/uploads/"
+        if marker not in storage_uri:
+            return None
+        suffix = storage_uri.split(marker, 1)[1]
+        candidate = self._root / suffix
+        return candidate if candidate.is_file() else None
 
     def exists(self, storage_uri: str) -> bool:
         return self.resolve_path(storage_uri).is_file()

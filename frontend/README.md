@@ -1,21 +1,22 @@
 # EventForge Frontend
 
-Next.js 16 App Router dashboard for the event-driven research pipeline.
+Next.js App Router dashboard for the dataset intelligence pipeline.
 
 ## Features
 
-- Query submit + job list/detail
+- Project upload + schema templates
 - React Flow pipeline visualization
-- SSE (`useJobStream`) — real-time stage updates via fetch
+- SSE (`useJobStream`) — real-time stage updates
+- QC panel + JSONL export preview
 - shadcn/ui + Tailwind v4
 
 ## Routes
 
-| Path            | Purpose                    |
-| --------------- | -------------------------- |
-| `/`             | Landing + recent queries   |
-| `/queries/new`  | Submit a research query    |
-| `/queries/[id]` | Pipeline graph + synthesis |
+| Path               | Purpose                              |
+| ------------------ | ------------------------------------ |
+| `/`                | Landing + recent projects            |
+| `/projects/new`    | Upload files + pick annotation schema |
+| `/projects/[id]`   | Pipeline graph + QC + JSONL export   |
 
 ## Local dev
 
@@ -35,7 +36,7 @@ frontend/src/
 ├── components/
 │   ├── ui/                 # shadcn/ui
 │   ├── workflow/           # React Flow nodes/edges
-│   └── dashboard/          # Synthesis, sources, cost
+│   └── dashboard/          # QC, export, cost panels
 ├── hooks/useJobStream.ts   # SSE subscription
 ├── lib/api-client.ts       # Typed fetch (openapi-typescript)
 └── types/                  # Generated from OpenAPI

@@ -6,12 +6,22 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from eventforge.api.deps import get_current_user, get_db, get_publisher, get_settings
-from eventforge.api.schemas.projects import SubmitProjectResponse
+from eventforge.api.schemas.projects import (
+    ProjectDetailResponse,
+    ProjectSummaryResponse,
+    SubmitProjectResponse,
+)
 from eventforge.core.config import Settings
 from eventforge.db.models import User
 from eventforge.db.repositories import DatasetExportRepository, ProjectRepository
 from eventforge.events.publisher import EventPublisher, EventPublishError
-from eventforge.services.project import UploadPayload, submit_project
+from eventforge.services.project import (
+    UploadPayload,
+    delete_project,
+    get_project_detail,
+    list_projects,
+    submit_project,
+)
 
 router = APIRouter()
 
@@ -90,6 +100,43 @@ async def create_project(
         correlation_id=result.correlation_id,
         asset_count=result.asset_count,
     )
+
+
+@router.get("/projects", response_model=list[ProjectSummaryResponse])
+async def list_user_projects(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[ProjectSummaryResponse]:
+    return await list_projects(db, current_user)
+
+
+@router.get("/projects/{project_id}", response_model=ProjectDetailResponse)
+async def get_project(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProjectDetailResponse:
+    detail = await get_project_detail(db, project_id, current_user)
+    if detail is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": "Project not found"},
+        )
+    return detail
+
+
+@router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_project(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    deleted = await delete_project(db, project_id, current_user)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": "Project not found"},
+        )
 
 
 @router.get("/projects/{project_id}/export")

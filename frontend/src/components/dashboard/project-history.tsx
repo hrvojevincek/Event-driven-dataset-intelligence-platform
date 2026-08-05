@@ -24,11 +24,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useDeleteQuery, useQueryList } from "@/hooks/use-queries";
+import { useDeleteProject, useProjectList } from "@/hooks/use-projects";
+import { templateById } from "@/lib/schema-templates";
 
 type PendingDelete = {
-  jobId: string;
-  topic: string;
+  projectId: string;
+  name: string;
 };
 
 function statusVariant(
@@ -39,9 +40,6 @@ function statusVariant(
   }
   if (status === "failed") {
     return "destructive";
-  }
-  if (status === "running" || status === "pending") {
-    return "outline";
   }
   return "outline";
 }
@@ -63,9 +61,9 @@ function formatRelativeTime(iso: string): string {
   return date.toLocaleDateString();
 }
 
-export function QueryHistory() {
-  const { data, isLoading, error } = useQueryList();
-  const deleteQuery = useDeleteQuery();
+export function ProjectHistory() {
+  const { data, isLoading, error } = useProjectList();
+  const deleteProject = useDeleteProject();
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
     null,
   );
@@ -74,7 +72,7 @@ export function QueryHistory() {
     if (!pendingDelete) {
       return;
     }
-    await deleteQuery.mutateAsync(pendingDelete.jobId);
+    await deleteProject.mutateAsync(pendingDelete.projectId);
     setPendingDelete(null);
   }
 
@@ -82,69 +80,74 @@ export function QueryHistory() {
     <section className="space-y-4">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-lg font-medium">Recent queries</h2>
+          <h2 className="text-base font-medium">Recent projects</h2>
           <p className="text-sm text-muted-foreground">
-            Your research jobs, newest first.
+            Dataset jobs, newest first.
           </p>
         </div>
         <Link
-          href="/queries/new"
+          href="/projects/new"
           className="text-sm text-primary hover:underline"
         >
-          New query
+          New project
         </Link>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Job history</CardTitle>
+          <CardTitle className="text-base">Project history</CardTitle>
           <CardDescription>
-            Click a job to open the live pipeline view.
+            Click a project to open the live pipeline view.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading jobs…</p>
+            <p className="text-sm text-muted-foreground">Loading projects…</p>
           ) : null}
           {error ? (
             <p className="text-sm text-destructive">
-              Failed to load jobs. Is the API running?
+              Failed to load projects. Is the API running?
             </p>
           ) : null}
           {!isLoading && !error && (data?.length ?? 0) === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No queries yet.{" "}
+              No projects yet.{" "}
               <Link
-                href="/queries/new"
+                href="/projects/new"
                 className="text-primary hover:underline"
               >
-                Submit your first topic
+                Upload your first files
               </Link>
               .
             </p>
           ) : null}
           {data && data.length > 0 ? (
             <ul className="divide-y divide-border">
-              {data.map((job) => (
-                <li key={job.job_id}>
-                  <div className="group flex items-center justify-between gap-2 py-3 -mx-2 px-2 rounded-lg hover:bg-muted/30">
+              {data.map((project) => (
+                <li key={project.job_id}>
+                  <div className="group -mx-2 flex items-center justify-between gap-2 rounded-lg px-2 py-3 hover:bg-muted/30">
                     <Link
-                      href={`/queries/${job.job_id}`}
+                      href={`/projects/${project.job_id}`}
                       className="flex min-w-0 flex-1 items-center justify-between gap-4"
                     >
                       <div className="min-w-0 space-y-1">
                         <p className="truncate text-sm font-medium">
-                          {job.topic}
+                          {project.name}
                         </p>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                           <Badge
-                            variant={statusVariant(job.status)}
+                            variant={statusVariant(project.status)}
                             className="font-mono text-[10px] uppercase"
                           >
-                            {job.status.replaceAll("_", " ")}
+                            {project.status.replaceAll("_", " ")}
                           </Badge>
-                          <span>{job.depth}</span>
-                          <span>{formatRelativeTime(job.created_at)}</span>
+                          <span>
+                            {templateById(project.schema_template)?.label ??
+                              project.schema_template ??
+                              "custom schema"}
+                          </span>
+                          <span>{project.asset_count} files</span>
+                          <span>{formatRelativeTime(project.created_at)}</span>
                         </div>
                       </div>
                       <ArrowRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
@@ -153,15 +156,15 @@ export function QueryHistory() {
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      aria-label={`Delete ${job.topic}`}
+                      aria-label={`Delete ${project.name}`}
                       disabled={
-                        deleteQuery.isPending &&
-                        deleteQuery.variables === job.job_id
+                        deleteProject.isPending &&
+                        deleteProject.variables === project.job_id
                       }
                       onClick={() => {
                         setPendingDelete({
-                          jobId: job.job_id,
-                          topic: job.topic,
+                          projectId: project.job_id,
+                          name: project.name,
                         });
                       }}
                       className="shrink-0 text-muted-foreground hover:text-destructive"
@@ -179,7 +182,7 @@ export function QueryHistory() {
       <AlertDialog
         open={pendingDelete !== null}
         onOpenChange={(open) => {
-          if (!open && !deleteQuery.isPending) {
+          if (!open && !deleteProject.isPending) {
             setPendingDelete(null);
           }
         }}
@@ -189,31 +192,31 @@ export function QueryHistory() {
             <AlertDialogMedia className="bg-destructive/10 text-destructive">
               <Trash2 />
             </AlertDialogMedia>
-            <AlertDialogTitle>Delete this job?</AlertDialogTitle>
+            <AlertDialogTitle>Delete this project?</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingDelete ? (
                 <>
                   <span className="font-medium text-foreground">
-                    {pendingDelete.topic}
+                    {pendingDelete.name}
                   </span>{" "}
-                  will be permanently removed, including pipeline history and
-                  results. This cannot be undone.
+                  will be permanently removed, including uploads, labels, and
+                  exports. This cannot be undone.
                 </>
               ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteQuery.isPending}>
+            <AlertDialogCancel disabled={deleteProject.isPending}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={deleteQuery.isPending}
+              disabled={deleteProject.isPending}
               onClick={() => {
                 void confirmDelete();
               }}
             >
-              {deleteQuery.isPending ? "Deleting…" : "Delete job"}
+              {deleteProject.isPending ? "Deleting…" : "Delete project"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
