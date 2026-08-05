@@ -13,13 +13,19 @@ from eventforge.api.schemas.queries import (
 from eventforge.core.config import Settings
 from eventforge.db.models import User
 from eventforge.events.publisher import EventPublisher, EventPublishError
-from eventforge.services.query import delete_query, get_query_detail, list_queries, submit_query
+from eventforge.services.query import (
+    delete_query,
+    get_query_detail,
+    list_queries,
+    submit_query,
+)
 
 router = APIRouter()
 
 
 def get_publisher(
-        settings: Settings = Depends(get_settings)) -> EventPublisher:
+    settings: Settings = Depends(get_settings),
+) -> EventPublisher:
     return EventPublisher(settings)
 
 
@@ -47,11 +53,15 @@ async def create_query(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail={"message": "Failed to publish query.submitted event",
-                    "error": str(exc)},) from exc
+            detail={
+                "message": "Failed to publish query.submitted event",
+                "error": str(exc),
+            },
+        ) from exc
 
     return SubmitQueryResponse(
-        job_id=result.job_id, correlation_id=result.correlation_id)
+        job_id=result.job_id, correlation_id=result.correlation_id
+    )
 
 
 @router.get(
@@ -77,7 +87,8 @@ async def get_query(
     detail = await get_query_detail(db, job_id, current_user)
     if detail is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
     return detail
 
 
@@ -93,4 +104,5 @@ async def remove_query(
     deleted = await delete_query(db, job_id, current_user)
     if not deleted:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )

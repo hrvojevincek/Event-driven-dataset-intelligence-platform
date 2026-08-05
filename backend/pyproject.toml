@@ -16,7 +16,6 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-grpc>=1.29",
     "opentelemetry-instrumentation-fastapi>=0.50b0",
     "opentelemetry-sdk>=1.29",
-    "pgvector>=0.4.2",
     "pydantic-settings>=2.0",
     "sqlalchemy[asyncio]>=2.0",
     "tiktoken>=0.9",

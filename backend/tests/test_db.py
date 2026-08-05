@@ -35,8 +35,8 @@ async def test_user_and_job_repositories(db_session: AsyncSession) -> None:
     job = Job(
         user_id=user.id,
         correlation_id="corr-test-123",
-        topic="What is event-driven architecture?",
-        depth="standard",
+        name="What is event-driven architecture?",
+        schema_json="{}",
         status=JobStatus.PENDING.value,
     )
     db_session.add(job)
@@ -48,7 +48,7 @@ async def test_user_and_job_repositories(db_session: AsyncSession) -> None:
 
     fetched_job = await job_repo.get_by_correlation_id("corr-test-123")
     assert fetched_job is not None
-    assert fetched_job.topic == job.topic
+    assert fetched_job.name == job.name
     assert fetched_job.user_id == user.id
 
     jobs = await job_repo.list_by_user_id(user.id)

@@ -6,15 +6,23 @@ alwaysApply: false
 
 # Event Pipeline
 
-## Flow
+> **Pivot active:** New work uses the **target** flow below. Legacy flow still in codebase until pivot phases land. See `docs/DATASET_PLATFORM.md`.
+
+## Target flow (dataset pivot)
+
+```
+project.submitted → intake.completed → preprocessing.completed → planning.completed
+  → annotation.task.dispatched (×N) → annotation.task.completed (×N) → export.completed
+```
+
+Step Functions handles annotation fan-out in prod. Local: simplified sequential fan-out.
+
+## Legacy flow (research — being removed)
 
 ```
 query.submitted → ingestion.completed → embedding.completed → knowledge.mined
-  → research.task.dispatched (×N) → research.task.completed (×N)
-  → synthesis.completed
+  → research.task.dispatched (×N) → research.task.completed (×N) → synthesis.completed
 ```
-
-Step Functions handles research fan-out in prod. Local: simplified sequential fan-out.
 
 ## Event naming
 
@@ -28,7 +36,17 @@ Define JSON Schema in `shared/events/` before the producer ships. Mirror as Pyda
 
 **Incremental policy:** bootstrap with envelope + `query.submitted` (KRE-122); add each stage's output schema when that worker is implemented. See `shared/events/README.md`.
 
-## Stage map
+## Stage map (target)
+
+| Event in                      | Worker         | Event out                    | Stores              |
+| ----------------------------- | -------------- | ---------------------------- | ------------------- |
+| project.submitted             | Intake         | intake.completed             | assets → Postgres   |
+| intake.completed              | Preprocessing  | preprocessing.completed    | segments → Postgres |
+| preprocessing.completed       | Planning       | planning.completed           | tasks → Postgres    |
+| annotation.task.dispatched    | Annotation     | annotation.task.completed  | batches → Postgres  |
+| all annotation done           | Export         | export.completed             | export → Postgres   |
+
+## Stage map (legacy)
 
 | Event in                 | Worker    | Event out               | Stores                        |
 | ------------------------ | --------- | ----------------------- | ----------------------------- |

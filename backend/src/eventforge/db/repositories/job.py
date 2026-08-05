@@ -9,12 +9,12 @@ from eventforge.db.repositories.base import BaseRepository
 
 
 class JobRepository(BaseRepository):
-    """Read and list research jobs."""
+    """Read and list dataset projects."""
     async def get_by_id(self, job_id: uuid.UUID) -> Job | None:
         result = await self.session.execute(
             select(Job)
             .where(Job.id == job_id)
-            .options(selectinload(Job.stages), selectinload(Job.synthesis_report))
+            .options(selectinload(Job.stages), selectinload(Job.dataset_export))
         )
         return result.scalar_one_or_none()
 

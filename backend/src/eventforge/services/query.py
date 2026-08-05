@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 from dataclasses import dataclass
@@ -15,7 +16,16 @@ from eventforge.api.schemas.queries import (
     SynthesisReportResponse,
 )
 from eventforge.core.otel import agent_span
-from eventforge.db.models import Job, JobStage, JobStageName, JobStatus, LLMUsage, StageStatus, User
+from eventforge.db.models import (
+    PIPELINE_STAGE_NAMES,
+    Job,
+    JobStage,
+    JobStatus,
+    LLMUsage,
+    StageStatus,
+    User,
+)
+from eventforge.db.models.legacy_compat import job_legacy_meta
 from eventforge.db.repositories import (
     JobRepository,
     LLMUsageRepository,
@@ -53,14 +63,20 @@ async def submit_query(
         id=job_id,
         user_id=user.id,
         correlation_id=correlation_id,
-        topic=topic,
-        depth=depth.value,
+        name=topic,
+        schema_json=json.dumps(
+            {
+                "_legacy": {
+                    "depth": depth.value,
+                    "max_sources": max_sources,
+                }
+            }
+        ),
         status=JobStatus.PENDING.value,
-        max_sources=max_sources,
     )
     session.add(job)
 
-    for stage_name in JobStageName:
+    for stage_name in PIPELINE_STAGE_NAMES:
         session.add(
             JobStage(
                 job_id=job_id,
@@ -78,7 +94,7 @@ async def submit_query(
         depth=depth,
         max_sources=max_sources,
     )
-
+    # idempotency
     processed_repo = ProcessedEventRepository(session)
     event_id = str(event.event_id)
 
@@ -94,7 +110,11 @@ async def submit_query(
     else:
         logger.info(
             "Skipped publish; query.submitted already claimed",
-            extra={"event_id": event_id, "job_id": str(job_id), "correlation_id": correlation_id},
+            extra={
+                "event_id": event_id,
+                "job_id": str(job_id),
+                "correlation_id": correlation_id,
+            },
         )
 
     await session.commit()
@@ -102,17 +122,18 @@ async def submit_query(
     return SubmitQueryResult(job_id=job_id, correlation_id=correlation_id)
 
 
-_STAGE_ORDER = {stage.value: index for index, stage in enumerate(JobStageName)}
+_STAGE_ORDER = {stage.value: index for index, stage in enumerate(PIPELINE_STAGE_NAMES)}
 
 
 def _job_to_summary_response(job: Job) -> QuerySummaryResponse:
+    legacy = job_legacy_meta(job.schema_json)
     return QuerySummaryResponse(
         job_id=job.id,
         correlation_id=job.correlation_id,
-        topic=job.topic,
-        depth=job.depth,
+        topic=job.name,
+        depth=legacy.get("depth", "standard"),
         status=job.status,
-        max_sources=job.max_sources,
+        max_sources=legacy.get("max_sources"),
         created_at=job.created_at,
         updated_at=job.updated_at,
     )
@@ -146,22 +167,24 @@ def _job_to_detail_response(
     llm_usage: LLMUsageSummaryResponse,
 ) -> QueryDetailResponse:
     stages = sorted(
-        job.stages, key=lambda stage: _STAGE_ORDER.get(
-            stage.stage, len(_STAGE_ORDER)))
+        job.stages,
+        key=lambda stage: _STAGE_ORDER.get(stage.stage, len(_STAGE_ORDER)),
+    )
     synthesis_report = None
-    if job.synthesis_report is not None:
+    if job.dataset_export is not None:
         synthesis_report = SynthesisReportResponse(
-            id=job.synthesis_report.id,
-            content=job.synthesis_report.content,
-            created_at=job.synthesis_report.created_at,
+            id=job.dataset_export.id,
+            content=job.dataset_export.export_content,
+            created_at=job.dataset_export.created_at,
         )
+    legacy = job_legacy_meta(job.schema_json)
     return QueryDetailResponse(
         job_id=job.id,
         correlation_id=job.correlation_id,
-        topic=job.topic,
-        depth=job.depth,
+        topic=job.name,
+        depth=legacy.get("depth", "standard"),
         status=job.status,
-        max_sources=job.max_sources,
+        max_sources=legacy.get("max_sources"),
         created_at=job.created_at,
         updated_at=job.updated_at,
         stages=[
@@ -181,7 +204,9 @@ def _job_to_detail_response(
     )
 
 
-async def list_queries(session: AsyncSession, user: User) -> list[QuerySummaryResponse]:
+async def list_queries(
+    session: AsyncSession, user: User
+) -> list[QuerySummaryResponse]:
     jobs = await JobRepository(session).list_by_user_id(user.id)
     return [_job_to_summary_response(job) for job in jobs]
 
@@ -217,9 +242,9 @@ async def get_query_detail(
     sources = [
         SourceResponse(
             id=source.id,
-            url=source.url,
-            title=source.title,
-            snippet=source.snippet,
+            url=source.storage_uri,
+            title=source.filename,
+            snippet=source.provenance or "",
             created_at=source.created_at,
         )
         for source in source_records

@@ -1,15 +1,7 @@
-import uuid
+"""Deprecated — use eventforge.db.repositories.dataset_export.DatasetExportRepository."""
 
-from sqlalchemy import select
+from eventforge.db.repositories.dataset_export import DatasetExportRepository
 
-from eventforge.db.models import SynthesisReport
-from eventforge.db.repositories.base import BaseRepository
+SynthesisReportRepository = DatasetExportRepository
 
-
-class SynthesisReportRepository(BaseRepository):
-    """Access the final synthesis report for a job."""
-    async def get_by_job_id(self, job_id: uuid.UUID) -> SynthesisReport | None:
-        result = await self.session.execute(
-            select(SynthesisReport).where(SynthesisReport.job_id == job_id)
-        )
-        return result.scalar_one_or_none()
+__all__ = ["SynthesisReportRepository"]

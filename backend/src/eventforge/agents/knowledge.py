@@ -3,7 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from eventforge.core.config import get_settings
 from eventforge.core.otel import traced_agent
-from eventforge.db.models import DocumentChunk, Job, JobStageName, KnowledgeEntity
+from eventforge.db.models import (
+    DocumentChunk,
+    Job,
+    JobStageName,
+    KnowledgeEntity,
+)
 from eventforge.db.repositories import (
     DocumentChunkRepository,
     JobRepository,
@@ -12,7 +17,11 @@ from eventforge.db.repositories import (
     ProcessedEventRepository,
 )
 from eventforge.events.deterministic import deterministic_event_id
-from eventforge.events.publisher import EVENT_SOURCE_KNOWLEDGE, EventPublisher, EventPublishError
+from eventforge.events.publisher import (
+    EVENT_SOURCE_KNOWLEDGE,
+    EventPublisher,
+    EventPublishError,
+)
 from eventforge.events.schemas import (
     DETAIL_TYPE_KNOWLEDGE_MINED,
     WORKER_NAME_KNOWLEDGE,
@@ -106,7 +115,9 @@ async def process_embedding_completed(
     )
     chunks = list(result.scalars().all())
     if len(chunks) != len(event.payload.chunk_ids):
-        msg = f"Document chunks missing for knowledge mining job: {event.job_id}"
+        msg = (
+            f"Document chunks missing for knowledge mining job: {event.job_id}"
+        )
         raise ValueError(msg)
 
     await stage_repo.mark_running(knowledge_stage)

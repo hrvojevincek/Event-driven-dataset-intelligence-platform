@@ -7,27 +7,37 @@
 | Priority | Source                                      | When                                                            |
 | -------- | ------------------------------------------- | --------------------------------------------------------------- |
 | 1        | `.cursor/rules/eventforge-core.mdc`         | Always (auto-applied)                                           |
-| 2        | `.cursor/rules/*.mdc` matching open files   | File-specific context                                           |
-| 3        | **Linear MCP** (`list_issues`, `get_issue`) | **Current work — prefer over TASKS.md**                         |
-| 4        | `docs/LINEAR.md`                            | Issue index, blockers, parallel tracks                          |
-| 5        | `docs/TASKS.md`                             | Phase progress mirror                                           |
-| 6        | `docs/ARCHITECTURE.md`                      | Pipeline, events, data flow                                     |
-| 7        | `docs/TECH_DECISIONS.md`                    | Before changing stack or patterns                               |
-| 8        | `docs/PRD.md`                               | Product scope and user stories                                  |
-| 9        | `docs/LOCAL_DEV.md`                         | Local setup and troubleshooting                                 |
-| 10       | `docs/ISSUES.md`                            | Past postmortems; append after hard infra/CI fixes (no secrets) |
+| 2        | **`docs/DATASET_PLATFORM.md`**              | **Active pivot — what we're building**                          |
+| 3        | **`docs/PIVOT_PLAN.md`**                    | **Active pivot — phase checklist & progress**                   |
+| 4        | `.cursor/rules/dataset-pivot.mdc`           | Backend, frontend, events during pivot                            |
+| 5        | `.cursor/rules/*.mdc` matching open files   | File-specific context                                           |
+| 6        | **Linear MCP** (`list_issues`, `get_issue`) | Issue tracking (when Linear issues exist for pivot)               |
+| 7        | `docs/LINEAR.md`                            | Legacy issue index (Phases 0–5)                                 |
+| 8        | `docs/TASKS.md`                             | Legacy phase progress (Phases 0–6)                              |
+| 9        | `docs/ARCHITECTURE.md`                      | Legacy pipeline diagrams — update in pivot Phase 10               |
+| 10       | `docs/TECH_DECISIONS.md`                    | ADR-014 pivot decision + stack choices                          |
+| 11       | `docs/PRD.md`                               | Legacy product scope — update in pivot Phase 10                   |
+| 12       | `docs/LOCAL_DEV.md`                         | Local setup and troubleshooting                                 |
+| 13       | `docs/ISSUES.md`                            | Postmortems; append after hard infra/CI fixes (no secrets)      |
 
 ## Project summary
 
-**EventForge** — event-driven multi-agent research platform.
+**EventForge** — pivoting to an **event-driven dataset intelligence platform** (BeatPulse-style).
 
-- User submits query → EventBridge triggers agent pipeline → results in dashboard with React Flow
+- User uploads files + annotation schema → EventBridge pipeline (intake → preprocess → plan → parallel annotate → export) → JSONL + QC in dashboard with React Flow
 - Hybrid: Next.js frontend + FastAPI backend + AWS events (EventBridge/SQS/Step Functions)
-- Data: Postgres + pgvector | Auth: mock user (open API) | Observability: OpenTelemetry
+- Data: Postgres (OLTP; pgvector removed) | Auth: mock user | Observability: OpenTelemetry
 
 ## Current status
 
-**Phases 0–4 complete.** **Phase 5 in progress** — AWS dev + CI/CD + Step Functions + observability ([KRE-156](https://linear.app/kreativbiro/issue/KRE-156)–[KRE-165](https://linear.app/kreativbiro/issue/KRE-165)). **Next:** cloud E2E verify, Phase 6. Index: `docs/LINEAR.md`
+**Dataset pivot active (2026-08-05).** Decisions locked via grilling — see `docs/PIVOT_PLAN.md` § Locked decisions.
+
+| Track | Status | Doc |
+| ----- | ------ | --- |
+| **Dataset pivot** | Phase 0 ✅ → Phase 1 next | `docs/PIVOT_PLAN.md` |
+| Legacy AWS (archived) | Terraform in repo, not maintained | ADR-015 |
+
+**Infra scope:** LocalStack + workers locally. No AWS deploy.
 
 ## Commands
 
@@ -49,10 +59,10 @@ make down                              # stop
 
 | Say this                     | Agent does                                          |
 | ---------------------------- | --------------------------------------------------- |
-| "What's next in EventForge?" | Linear MCP → suggest unblocked `KRE-xxx`            |
+| "What's next in the pivot?" | Read `docs/PIVOT_PLAN.md` progress table → next phase |
+| "Implement pivot Phase N"    | Follow `docs/PIVOT_PLAN.md` Phase N checklist       |
+| "What's next in EventForge?" | Linear MCP or `docs/PIVOT_PLAN.md` if pivot active  |
 | "Implement KRE-118"          | `get_issue` → implement acceptance criteria         |
-| "Implement Phase 3"          | Follow Phase 3 — real AI agents in `docs/TASKS.md`  |
-| "Implement Phase 4"          | Follow Phase 4 — frontend + SSE in `docs/LINEAR.md` |
 | "Mark KRE-117 done"          | Close in Linear + update `docs/TASKS.md`            |
 
 ## Cursor rules map
@@ -60,9 +70,10 @@ make down                              # stop
 ```
 .cursor/rules/
 ├── eventforge-core.mdc      alwaysApply — stack, architecture, behavior
+├── dataset-pivot.mdc        pivot — target product, terminology, constraints
 ├── backend-python.mdc       backend/**
 ├── frontend-nextjs.mdc      frontend/**
-├── event-pipeline.mdc       agents, workers, events
+├── event-pipeline.mdc       agents, workers, events (legacy + target flow)
 ├── infra-aws.mdc            infra, docker-compose
 └── docs-workflow.mdc        docs, TASKS, workflow
 ```

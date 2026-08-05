@@ -1,0 +1,62 @@
+---
+description: Dataset intelligence pivot — locked decisions, target pipeline, constraints
+globs: backend/**,frontend/**,shared/events/**,docs/DATASET_PLATFORM.md,docs/PIVOT_PLAN.md
+alwaysApply: false
+---
+
+# Dataset Pivot (Active)
+
+> **Locked decisions:** `docs/PIVOT_PLAN.md` § Locked decisions. **Product vision:** `docs/DATASET_PLATFORM.md`.
+
+## What we're building
+
+**Dataset intelligence platform** (BeatPulse-style): upload files + schema template → labeled JSONL + QC out.
+
+NOT research/RAG. Do not add Tavily, pgvector, web search, or markdown synthesis.
+
+## Target pipeline (LocalStack + workers)
+
+```
+project.submitted → intake.completed → preprocessing.completed → planning.completed
+  → annotation.task.dispatched (×N) → annotation.task.completed (×N) → export.completed
+```
+
+| Stage | Worker | Notes |
+|-------|--------|-------|
+| Intake | Register files (local disk) | `./data/uploads/{project_id}/` |
+| Preprocessing | Extract + segment | **Sequential** v1 (all assets in one worker) |
+| Planning | Template + batch → tasks | 2 templates: support-call, document-classification |
+| Annotation (×N) | LLM label batches | **Map fan-out**; sequential fallback if LocalStack SF flaky |
+| Export | JSONL + QC report | Coverage, compliance, confidence flags |
+
+## Schema UX
+
+- Template picker + optional JSON override
+- Templates: **Support call annotation**, **Document classification**
+- Demo fixture: `fixtures/support-calls/*.txt`
+
+## Terminology (new code)
+
+Job→Project, Source→Asset, DocumentChunk→Segment, KnowledgeEntity→AnnotationTask, ResearchNote→AnnotationBatch, SynthesisReport→DatasetExport
+
+Stage IDs: `intake`, `preprocessing`, `planning`, `annotation`, `export`
+
+## Keep
+
+LocalStack (EventBridge, SQS, Step Functions), workers, idempotency, DLQ, SSE, React Flow, OTEL, cost tracking
+
+## Remove / do not add
+
+pgvector, Tavily, RAG, `/queries` route, AWS deploy work, Terraform maintenance, S3 (v1)
+
+## Migration
+
+Big-bang with vertical slices. No parallel old+new API. Delete research code as each stage is replaced.
+
+## Demo UX
+
+60% React Flow pipeline / 40% QC panel + JSONL download
+
+## Current phase
+
+See `docs/PIVOT_PLAN.md` progress table. Phase 1 done → **Phase 2 event contracts** next.

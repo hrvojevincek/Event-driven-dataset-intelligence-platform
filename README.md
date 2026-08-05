@@ -2,9 +2,7 @@
 
 **Event-driven multi-agent research platform** — submit a topic, watch a pipeline of specialized agents investigate it in parallel, and get a structured synthesis with sources.
 
-Built as full-stack project: production patterns (idempotency, DLQ, correlation IDs, cost tracking) over a real AWS event architecture - practicing AWS and event distributed systems.
-
-Using only agents might be a over-stretch, but mainly for learning and experimenting with production AWS setup.
+Portfolio project focused on production event-driven patterns on AWS — idempotency, DLQ, correlation IDs, cost controls, observability — with a multi-agent research pipeline as the workload.
 
 ## Architecture (at a glance)
 

@@ -112,6 +112,7 @@ async def _seed_job_with_notes(
             chunk_id=None,
             name=job.topic,
             entity_type="topic",
+            task_index=0,
         ),
     ]
     for index in range(concept_count):
@@ -121,6 +122,7 @@ async def _seed_job_with_notes(
                 chunk_id=None,
                 name=f"concept {index}",
                 entity_type="concept",
+                task_index=index + 1,
             )
         )
     db_session.add_all(entities)
