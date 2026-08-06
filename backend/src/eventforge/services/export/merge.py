@@ -18,6 +18,9 @@ class ExportRecord:
     content: str
     labels: dict[str, str]
     provenance: dict[str, Any]
+    audio_uri: str | None = None
+    start_ms: int | None = None
+    end_ms: int | None = None
 
 
 @dataclass(frozen=True)
@@ -104,15 +107,35 @@ def _parse_batch_labels(
 
 
 def _record_to_line(record: ExportRecord) -> str:
-    return json.dumps(
-        {
-            "segment_id": str(record.segment_id),
-            "content": record.content,
-            "labels": record.labels,
-            "provenance": record.provenance,
-        },
-        ensure_ascii=False,
-    )
+    payload: dict[str, Any] = {
+        "segment_id": str(record.segment_id),
+        "content": record.content,
+        "labels": record.labels,
+        "provenance": record.provenance,
+    }
+    if record.audio_uri is not None:
+        payload["audio_uri"] = record.audio_uri
+    if record.start_ms is not None:
+        payload["start_ms"] = record.start_ms
+    if record.end_ms is not None:
+        payload["end_ms"] = record.end_ms
+    return json.dumps(payload, ensure_ascii=False)
+
+
+def _audio_provenance_extras(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    if not metadata:
+        return {}
+    extras: dict[str, Any] = {}
+    asr_model = metadata.get("asr_model")
+    if isinstance(asr_model, str) and asr_model:
+        extras["asr_model"] = asr_model
+    asr_confidence = metadata.get("asr_confidence")
+    if asr_confidence is not None:
+        try:
+            extras["asr_confidence"] = round(float(asr_confidence), 4)
+        except (TypeError, ValueError):
+            pass
+    return extras
 
 
 def merge_batches_to_jsonl(
@@ -138,23 +161,29 @@ def merge_batches_to_jsonl(
         key=lambda segment: (segment.asset_id, segment.segment_index),
     )
     records: list[ExportRecord] = []
+    is_audio_project = project.domain == "audio"
     for segment in ordered_segments:
         label_entry = labels_by_segment.get(segment.id)
         if label_entry is None:
             continue
         labels, confidence = label_entry
         asset = assets_by_id.get(segment.asset_id)
+        provenance = {
+            "asset_filename": asset.filename if asset is not None else "unknown",
+            "project_id": str(project.id),
+            "annotator": annotator or "unknown",
+            "confidence": round(confidence, 4),
+            **_audio_provenance_extras(segment.metadata_json),
+        }
         records.append(
             ExportRecord(
                 segment_id=segment.id,
                 content=segment.content,
                 labels=labels,
-                provenance={
-                    "asset_filename": asset.filename if asset is not None else "unknown",
-                    "project_id": str(project.id),
-                    "annotator": annotator or "unknown",
-                    "confidence": round(confidence, 4),
-                },
+                provenance=provenance,
+                audio_uri=asset.storage_uri if is_audio_project and asset is not None else None,
+                start_ms=segment.start_offset if is_audio_project else None,
+                end_ms=segment.end_offset if is_audio_project else None,
             )
         )
 

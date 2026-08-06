@@ -57,6 +57,7 @@ class QCReportResponse(BaseModel):
     labeled_count: int
     batch_count: int
     flags: list[str]
+    empty_transcript_count: int = 0
 
 
 class DatasetExportSummaryResponse(BaseModel):

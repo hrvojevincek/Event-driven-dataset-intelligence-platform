@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
-from eventforge.db.models import Job
+from eventforge.db.models import Job, Segment
 from eventforge.services.export.merge import ExportRecord
 from eventforge.services.planning.schema_templates import load_label_schema
 
@@ -26,6 +26,7 @@ class QCReport:
     labeled_count: int
     batch_count: int
     flags: list[str]
+    empty_transcript_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -37,6 +38,7 @@ class QCReport:
             "labeled_count": self.labeled_count,
             "batch_count": self.batch_count,
             "flags": self.flags,
+            "empty_transcript_count": self.empty_transcript_count,
         }
 
     def to_json(self) -> str:
@@ -64,6 +66,7 @@ def build_qc_report(
     total_segments: int,
     batch_count: int,
     total_cost_usd: Decimal,
+    segments: list[Segment] | None = None,
 ) -> QCReport:
     """Compute coverage, schema compliance, and confidence flags for an export."""
     label_schema = load_label_schema(project.schema_json, project.schema_template)
@@ -103,6 +106,12 @@ def build_qc_report(
     if low_confidence_segment_ids:
         flags.append("low_confidence_segments")
 
+    empty_transcript_count = 0
+    if project.domain == "audio" and segments is not None:
+        empty_transcript_count = sum(1 for segment in segments if not segment.content.strip())
+        if empty_transcript_count > 0:
+            flags.append("empty_transcripts")
+
     return QCReport(
         coverage_pct=coverage_pct,
         schema_compliance_pct=schema_compliance_pct,
@@ -112,4 +121,5 @@ def build_qc_report(
         labeled_count=labeled_count,
         batch_count=batch_count,
         flags=flags,
+        empty_transcript_count=empty_transcript_count,
     )

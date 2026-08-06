@@ -75,6 +75,7 @@ async def _load_or_create_export(
         total_segments=len(segments),
         batch_count=len(batches),
         total_cost_usd=total_cost,
+        segments=segments,
     )
 
     export = DatasetExport(

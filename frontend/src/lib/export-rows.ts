@@ -3,6 +3,9 @@ export type ExportRow = {
   content: string;
   labels: Record<string, string>;
   provenance: Record<string, unknown>;
+  audio_uri?: string;
+  start_ms?: number;
+  end_ms?: number;
 };
 
 export function parseExportJsonl(content: string): ExportRow[] {
