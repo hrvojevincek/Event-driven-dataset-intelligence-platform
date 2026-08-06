@@ -343,6 +343,8 @@ export interface components {
             batch_count: number;
             /** Flags */
             flags: string[];
+            /** Empty Transcript Count */
+            empty_transcript_count?: number;
         };
         /**
          * SubmitProjectResponse

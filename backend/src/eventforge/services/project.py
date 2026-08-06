@@ -256,6 +256,7 @@ def _job_to_detail_response(
                 labeled_count=int(qc_data.get("labeled_count", 0)),
                 batch_count=int(qc_data.get("batch_count", 0)),
                 flags=[str(flag) for flag in qc_data.get("flags", [])],
+                empty_transcript_count=int(qc_data.get("empty_transcript_count", 0)),
             ),
         )
 

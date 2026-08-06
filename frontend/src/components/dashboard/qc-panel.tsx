@@ -84,6 +84,12 @@ export function QcPanel({
               {qc.low_confidence_segment_ids.length}
             </dd>
           </div>
+          {detail?.domain === "audio" && (qc.empty_transcript_count ?? 0) > 0 ? (
+            <div>
+              <dt className="text-muted-foreground">Empty transcripts</dt>
+              <dd className="font-mono">{qc.empty_transcript_count}</dd>
+            </div>
+          ) : null}
         </dl>
 
         {qc.flags.length > 0 ? (
