@@ -1,16 +1,18 @@
 """Preprocessing stage: turn uploaded assets into annotatable segments.
 
 Consumes ``intake.completed``, loads each asset from local storage, extracts text
-(plain/Markdown/PDF via PyMuPDF), splits into token-bounded chunks with overlap,
-persists ``Segment`` rows (idempotent per job), and publishes
-``preprocessing.completed`` with segment IDs for the planning stage.
+(plain/Markdown/PDF via PyMuPDF) or transcribes audio (WAV via ASR), splits into
+annotation-sized chunks, persists ``Segment`` rows (idempotent per project), and
+publishes ``preprocessing.completed`` with segment IDs for the planning stage.
 """
+
+from __future__ import annotations
 
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from eventforge.core.config import get_settings
+from eventforge.core.config import Settings, get_settings
 from eventforge.core.otel import traced_stage
 from eventforge.db.models import Asset, JobStageName, Segment
 from eventforge.db.repositories import AssetRepository, SegmentRepository
@@ -25,6 +27,8 @@ from eventforge.events.schemas import (
     build_preprocessing_completed_event,
 )
 from eventforge.services.preprocessing import read_asset_text, segment_text, source_kind_for_asset
+from eventforge.services.preprocessing.asr import ASRProvider, get_asr_provider
+from eventforge.services.preprocessing.audio import is_audio_asset, transcribe_asset_to_segments
 from eventforge.services.storage.local import LocalStorage, get_local_storage
 from eventforge.stages._runtime import StageRun, parse_event
 
@@ -34,9 +38,11 @@ async def _load_or_create_segments(
     job_id: uuid.UUID,
     assets: list[Asset],
     storage: LocalStorage,
+    settings: Settings,
     *,
     chunk_size: int,
     overlap: int,
+    asr: ASRProvider | None = None,
 ) -> list[Segment]:
     segment_repo = SegmentRepository(session)
     existing = await segment_repo.list_by_job_id(job_id)
@@ -44,7 +50,31 @@ async def _load_or_create_segments(
         return existing
 
     segments: list[Segment] = []
+
     for asset in assets:
+        if is_audio_asset(asset):
+            asr_provider = asr or get_asr_provider(settings)
+            pieces = transcribe_asset_to_segments(
+                asset,
+                storage,
+                asr_provider,
+                min_window_ms=settings.asr_min_window_ms,
+                max_window_ms=settings.asr_max_window_ms,
+            )
+            for piece in pieces:
+                segments.append(
+                    Segment(
+                        job_id=job_id,
+                        asset_id=asset.id,
+                        segment_index=piece.segment_index,
+                        content=piece.content,
+                        start_offset=piece.start_ms,
+                        end_offset=piece.end_ms,
+                        metadata_json=piece.metadata_json,
+                    )
+                )
+            continue
+
         text = read_asset_text(asset, storage)
         kind = source_kind_for_asset(asset)
         for piece in segment_text(
@@ -80,6 +110,7 @@ async def run_preprocessing(
     event: IntakeCompletedEvent,
     *,
     storage: LocalStorage | None = None,
+    asr: ASRProvider | None = None,
 ) -> PreprocessingCompletedEvent | None:
     """Run preprocessing for one intake.completed event. Returns None if already processed."""
     run = await StageRun.begin(
@@ -106,8 +137,10 @@ async def run_preprocessing(
         run.job.id,
         assets,
         store,
+        settings,
         chunk_size=settings.preprocessing_segment_size_tokens,
         overlap=settings.preprocessing_segment_overlap_tokens,
+        asr=asr,
     )
 
     completed_event = build_preprocessing_completed_event(

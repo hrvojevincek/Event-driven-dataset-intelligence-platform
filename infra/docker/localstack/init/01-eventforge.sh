@@ -30,6 +30,18 @@ print(json.dumps({"RedrivePolicy": json.dumps(redrive)}))
     --attributes "${attributes_json}"
 }
 
+configure_preprocessing_visibility() {
+  local queue_name="${PREFIX}-preprocessing"
+  local queue_url visibility
+
+  queue_url="$(awslocal sqs get-queue-url --queue-name "${queue_name}" --query 'QueueUrl' --output text)"
+  visibility="${PREPROCESSING_QUEUE_VISIBILITY_SECONDS:-900}"
+
+  awslocal sqs set-queue-attributes \
+    --queue-url "${queue_url}" \
+    --attributes "{\"VisibilityTimeout\":\"${visibility}\"}"
+}
+
 queue_arn() {
   local queue_name="$1"
   local queue_url
@@ -78,6 +90,8 @@ DLQ_ARN="$(awslocal sqs get-queue-attributes \
 for queue in "${WORKER_QUEUES[@]}"; do
   configure_redrive_policy "${PREFIX}-${queue}"
 done
+
+configure_preprocessing_visibility
 
 wire_event_to_queue \
   eventforge-project-submitted-to-intake \

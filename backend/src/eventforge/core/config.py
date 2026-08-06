@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     llm_max_output_tokens: int = 4096
     preprocessing_segment_size_tokens: int = 512
     preprocessing_segment_overlap_tokens: int = 50
+    asr_provider: Literal["local", "openai"] = "local"
+    asr_local_model: str = "small"
+    asr_openai_model: str = "whisper-1"
+    asr_device: str = "cpu"
+    asr_min_window_ms: int = 15_000
+    asr_max_window_ms: int = 45_000
+    preprocessing_queue_visibility_seconds: int = 900
     planning_segments_per_task: int | None = None
     llm_max_retries: int = 3
     llm_retry_base_delay_seconds: float = 1.0
