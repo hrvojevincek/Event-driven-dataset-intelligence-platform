@@ -51,8 +51,8 @@ def _resolve_upload_type(
     max_bytes: int,
     schema_template: str | None,
     max_audio_duration_seconds: int,
-) -> tuple[str, str, float | None]:
-    """Validate extension, size, MIME, and audio limits; return those plus duration."""
+) -> tuple[str, str, float | None, str]:
+    """Validate upload metadata; return extension, MIME type, duration, and basename."""
     extension = Path(filename).suffix.lower()
     name = Path(filename).name
 

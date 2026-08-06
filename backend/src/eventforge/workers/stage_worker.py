@@ -98,6 +98,7 @@ class StageWorker(SqsConsumer):
                 extra={
                     "event_id": str(failed_event.event_id),
                     "job_id": str(failed_event.job_id),
+                    "correlation_id": failed_event.correlation_id,
                     "worker": self.worker_name,
                 },
             )

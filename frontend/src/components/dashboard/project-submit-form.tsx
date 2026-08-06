@@ -39,6 +39,7 @@ export function ProjectSubmitForm() {
     register,
     handleSubmit,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(projectSubmitSchema),
@@ -60,12 +61,15 @@ export function ProjectSubmitForm() {
   const supportedFormats = supportedFormatsLabel(templateId);
 
   function handleTemplateChange(id: SchemaTemplateId) {
-    setValue("templateId", id, { shouldValidate: errors.templateId != null });
+    setValue("templateId", id);
     if (showJsonEditor) {
       const template = SCHEMA_TEMPLATES.find((t) => t.id === id);
       if (template) {
         setValue("schemaOverride", JSON.stringify(template.schema, null, 2));
       }
+    }
+    if (files?.length) {
+      void trigger("files");
     }
   }
 

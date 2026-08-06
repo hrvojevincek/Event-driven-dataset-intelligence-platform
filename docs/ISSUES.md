@@ -136,7 +136,7 @@ Singleton removed ~1.8s of repeated model init. Remaining cost is real CPU trans
 
 **Lesson:** Heavy ML clients (Whisper, etc.) must be process-singletons in long-lived workers. Add child spans before optimizing — otherwise you tune the wrong slice.
 
-**Files:** `backend/src/eventforge/services/preprocessing/asr.py`, `audio.py`, `stages/preprocessing.py`, `tests/test_asr_provider_cache.py`
+**Files:** `backend/src/eventforge/services/preprocessing/asr.py`, `backend/src/eventforge/services/preprocessing/audio.py`, `backend/src/eventforge/stages/preprocessing.py`, `backend/tests/test_asr_provider_cache.py`
 
 ---
 
