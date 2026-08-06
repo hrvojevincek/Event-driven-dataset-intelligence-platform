@@ -162,17 +162,12 @@ def _parse_label_response(
 
 
 def build_labels_json(segment_labels: list[SegmentLabels]) -> dict[str, Any]:
-    """Serialize per-segment labels for AnnotationBatch.labels_json."""
-    return {
-        "segments": [
-            {
-                "segment_id": str(item.segment_id),
-                "labels": item.labels,
-                "confidence": float(item.confidence),
-            }
-            for item in segment_labels
-        ]
-    }
+    """Serialize per-segment labels for AnnotationBatch.labels_json.
+
+    Per-segment confidence is stored on ``AnnotationBatch.confidence``, not in
+    ``labels_json``; export uses that column when building provenance.
+    """
+    return {str(item.segment_id): dict(item.labels) for item in segment_labels}
 
 
 def batch_confidence(segment_labels: list[SegmentLabels]) -> Decimal:

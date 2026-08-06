@@ -1,11 +1,11 @@
 """Validate uploaded files before persisting assets."""
 
 import hashlib
-import json
 import mimetypes
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 ALLOWED_EXTENSIONS = {".txt", ".md", ".pdf"}
 
@@ -18,7 +18,7 @@ class ValidatedUpload:
     mime_type: str
     byte_size: int
     content_hash: str
-    provenance_json: str
+    provenance: dict[str, Any]
 
 
 def detect_mime_type(filename: str, content: bytes) -> str:
@@ -62,5 +62,5 @@ def validate_upload(filename: str, content: bytes, *, max_bytes: int) -> Validat
         mime_type=mime_type,
         byte_size=len(content),
         content_hash=content_hash,
-        provenance_json=json.dumps(provenance),
+        provenance=provenance,
     )

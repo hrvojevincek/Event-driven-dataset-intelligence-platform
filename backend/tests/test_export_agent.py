@@ -105,18 +105,12 @@ async def _seed_export_project(
         task_id=task.id,
         task_index=0,
         labels_json={
-            "segments": [
-                {
-                    "segment_id": str(segment.id),
-                    "labels": {
-                        "emotion": "frustrated",
-                        "intent": "complaint",
-                        "topic": "billing",
-                        "resolution_status": "unresolved",
-                    },
-                    "confidence": 0.88,
-                }
-            ]
+            str(segment.id): {
+                "emotion": "frustrated",
+                "intent": "complaint",
+                "topic": "billing",
+                "resolution_status": "unresolved",
+            },
         },
         segment_count=1,
         confidence=Decimal("0.8800"),

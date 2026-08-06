@@ -33,8 +33,16 @@ class MergeResult:
 
 def _parse_batch_labels(
     labels_json: dict[str, Any] | str,
+    *,
+    batch_confidence: float | None = None,
 ) -> list[tuple[uuid.UUID, dict[str, str], float]]:
-    """Parse AnnotationBatch.labels_json into per-segment label tuples."""
+    """Parse AnnotationBatch.labels_json into per-segment label tuples.
+
+    Accepts canonical segment-map shape ``{"<segment_id>": {...labels}}`` or the
+    legacy ``{"segments": [{"segment_id", "labels", "confidence"}]}`` array.
+    Canonical map entries use ``batch_confidence`` when per-segment confidence
+    is not stored in ``labels_json``.
+    """
     if isinstance(labels_json, str):
         try:
             parsed = json.loads(labels_json)
@@ -71,6 +79,12 @@ def _parse_batch_labels(
         return labeled
 
     if isinstance(parsed, dict):
+        fallback_confidence = 0.0
+        if batch_confidence is not None:
+            try:
+                fallback_confidence = float(batch_confidence)
+            except (TypeError, ValueError):
+                fallback_confidence = 0.0
         legacy: list[tuple[uuid.UUID, dict[str, str], float]] = []
         for key, value in parsed.items():
             if not isinstance(value, dict):
@@ -84,7 +98,7 @@ def _parse_batch_labels(
                 for field, field_value in value.items()
                 if isinstance(field_value, str) and field_value.strip()
             }
-            legacy.append((segment_id, normalized, 0.0))
+            legacy.append((segment_id, normalized, fallback_confidence))
         return legacy
 
     msg = "labels_json must be a segment map or labeler segments array"
@@ -112,7 +126,11 @@ def merge_batches_to_jsonl(
     """Combine labeled batches into ordered JSONL for a project."""
     labels_by_segment: dict[uuid.UUID, tuple[dict[str, str], float]] = {}
     for batch in batches:
-        for segment_id, labels, confidence in _parse_batch_labels(batch.labels_json):
+        batch_confidence = float(batch.confidence) if batch.confidence is not None else None
+        for segment_id, labels, confidence in _parse_batch_labels(
+            batch.labels_json,
+            batch_confidence=batch_confidence,
+        ):
             labels_by_segment[segment_id] = (labels, confidence)
 
     ordered_segments = sorted(

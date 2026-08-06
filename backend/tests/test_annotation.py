@@ -44,8 +44,8 @@ def test_build_labels_json_serializes_segments() -> None:
         ]
     )
     parsed = payload
-    assert parsed["segments"][0]["segment_id"] == str(segment_id)
-    assert parsed["segments"][0]["labels"]["topic"] == "billing"
+    assert str(segment_id) in parsed
+    assert parsed[str(segment_id)]["topic"] == "billing"
 
 
 async def test_label_segments_parses_llm_json() -> None:
