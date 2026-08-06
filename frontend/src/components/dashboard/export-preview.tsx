@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useProjectExport } from "@/hooks/use-project-export";
 import {
-  fetchProjectExport,
   projectExportDownloadUrl,
   type ProjectDetail,
 } from "@/lib/api-client";
@@ -22,47 +21,26 @@ const PREVIEW_LINES = 5;
 type ExportPreviewLoadedProps = {
   projectId: string;
   lineCount: number;
+  content: string | null;
+  previewError: string | null;
+  loadingPreview: boolean;
 };
 
-/** Fetches and shows JSONL preview once export exists (mounted only when ready). */
 function ExportPreviewLoaded({
   projectId,
   lineCount,
+  content,
+  previewError,
+  loadingPreview,
 }: ExportPreviewLoadedProps) {
-  const [preview, setPreview] = useState<string | null>(null);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void fetchProjectExport(projectId)
-      .then((content) => {
-        if (cancelled) {
-          return;
-        }
-        const lines = content
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .slice(0, PREVIEW_LINES);
-        setPreview(lines.join("\n"));
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setPreviewError("Failed to load JSONL preview");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoadingPreview(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId]);
+  const preview = content
+    ? content
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, PREVIEW_LINES)
+        .join("\n")
+    : null;
 
   return (
     <div className="space-y-4">
@@ -111,6 +89,10 @@ export function ExportPreview({
   const hasExport = detail?.dataset_export != null;
   const lineCount = detail?.dataset_export?.line_count ?? 0;
   const exportReady = hasExport && jobStatus === "completed";
+  const { content, error, isLoading: loadingPreview } = useProjectExport(
+    projectId,
+    exportReady,
+  );
 
   if (isLoading && !detail) {
     return (
@@ -123,9 +105,11 @@ export function ExportPreview({
   if (exportReady) {
     return (
       <ExportPreviewLoaded
-        key={projectId}
         projectId={projectId}
         lineCount={lineCount}
+        content={content}
+        previewError={error}
+        loadingPreview={loadingPreview}
       />
     );
   }
