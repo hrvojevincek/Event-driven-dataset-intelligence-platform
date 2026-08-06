@@ -10,23 +10,25 @@ alwaysApply: false
 
 | Layer | Role |
 |-------|------|
-| **Linear** (`EventForge` project) | Active work — acceptance criteria, blockers, status |
-| `docs/TASKS.md` | Roadmap mirror — checkboxes + `KRE-xxx` links |
-| `docs/LINEAR.md` | Issue index, parallel tracks, MCP cheat sheet |
+| **`docs/PIVOT_PLAN.md`** | **Active pivot** — phase checklist, progress, file touch map |
+| **`docs/DATASET_PLATFORM.md`** | **Active product** — pipeline, schema templates, terminology |
+| **Linear** (`EventForge` project) | Issue tracking when pivot issues exist |
+| `docs/TASKS.md` | **Legacy** roadmap mirror (Phases 0–6 research/AWS) |
+| `docs/LINEAR.md` | **Legacy** issue index (Phases 0–5) |
 | `.cursor/rules/*.mdc` | Agent conventions |
-| `docs/ARCHITECTURE.md` etc. | Deep design reference |
+| `docs/ARCHITECTURE.md` | Pipeline diagrams (**legacy** until Phase 10 rewrite) |
 
-## Session start (Linear MCP)
+## Session start
 
-1. `list_issues` with project `EventForge` (or `get_issue` if user names `KRE-xxx`)
-2. Pick unblocked issue in current milestone
-3. Read acceptance criteria from issue + relevant `.cursor/rules/`
+1. Read `docs/PIVOT_PLAN.md` progress table for current phase
+2. Optional: Linear MCP `list_issues(project: EventForge)` for tracked issues
+3. Read acceptance criteria + relevant `.cursor/rules/`
 
-## On issue complete
+## On pivot phase complete
 
-1. Mark Done in Linear (`save_issue`, state: Done)
-2. Check matching boxes in `docs/TASKS.md`
-3. Update ADRs only if architecture changed
+1. Check boxes in `docs/PIVOT_PLAN.md`
+2. Update ADRs only if architecture changed
+3. Legacy: mark Done in Linear + check `docs/TASKS.md` if issue maps to old phases
 
 ## Doc roles
 
@@ -34,11 +36,12 @@ alwaysApply: false
 |------|--------------|
 | `docs/DATASET_PLATFORM.md` | **Pivot:** target product, terminology, success criteria |
 | `docs/PIVOT_PLAN.md` | **Pivot:** phase checklist, progress, file touch map |
-| `docs/LINEAR.md` | Legacy issue index (Phases 0–5) |
-| `docs/TASKS.md` | Legacy phase progress |
+| `docs/LINEAR.md` | Legacy issue index (Phases 0–5) — archived |
+| `docs/TASKS.md` | Legacy phase progress (Phases 0–6) — archived |
 | `docs/ARCHITECTURE.md` | Pipeline diagrams (legacy until pivot Phase 10) |
 | `docs/TECH_DECISIONS.md` | ADR-014 pivot + stack decisions |
 | `docs/PRD.md` | Product scope (legacy until pivot Phase 10) |
+| `docs/CICD.md` | Active CI + archived AWS deploy reference |
 | `docs/ISSUES.md` | Postmortems — append after non-trivial infra/CI/debug fixes (placeholders only, no secrets) |
 
 ## On non-trivial bug fix
@@ -47,8 +50,8 @@ After resolving a production-style issue (Terraform thrash, CI OIDC, hung apply,
 
 1. Add a STAR entry to `docs/ISSUES.md` using the template at the bottom
 2. Use placeholders — never real account IDs, ARNs, API keys, or secret contents
-3. Link file paths and error messages; point to `docs/CICD.md` for setup details
+3. Link file paths and error messages; point to `docs/CICD.md` for historical CI/deploy setup
 
 ## Phase exit criteria
 
-Don't start Phase 2 until backend Phase 1 scaffold is Done (KRE-125). Frontend (KRE-128) is Phase 4, not a blocker for Phases 2–3.
+Follow `docs/PIVOT_PLAN.md` for pivot phases. Legacy Phases 0–6 are complete — do not use `docs/TASKS.md` for new work.

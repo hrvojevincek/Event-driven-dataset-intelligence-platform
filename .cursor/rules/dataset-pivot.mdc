@@ -33,7 +33,7 @@ project.submitted → intake.completed → preprocessing.completed → planning.
 
 - Template picker + optional JSON override
 - Templates: **Support call annotation**, **Document classification**
-- Demo fixture: `fixtures/support-calls/*.txt`
+- Demo fixture: `fixtures/support-calls-audio/` (WAV); text uploads use any `.txt` file
 
 ## Terminology (new code)
 

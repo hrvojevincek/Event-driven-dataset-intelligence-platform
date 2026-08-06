@@ -58,22 +58,22 @@ Phase 1+: `uv run uvicorn eventforge.main:app --reload` (backend), `npm run dev`
 1. Minimize scope — surgical diffs, match existing conventions
 2. No secrets in code — `.env` / AWS Secrets Manager
 3. Event schemas in `shared/events/` → mirror as Pydantic models
-4. Update `docs/TASKS.md` checkboxes when completing work
+4. Update `docs/PIVOT_PLAN.md` checkboxes when completing pivot work
 5. Commit only when user explicitly asks
-6. Read `docs/ARCHITECTURE.md` for diagrams; `docs/TASKS.md` for current phase
+6. Read `docs/DATASET_PLATFORM.md` for product; `docs/PIVOT_PLAN.md` for current phase
 7. **Docstrings on new classes** — every new Python class gets a one-line docstring (purpose, not field list); add docstrings to touched classes if missing
 
 ## User shortcuts
 
 - "What's next in EventForge?" → Linear MCP `list_issues(project: EventForge)`, suggest unblocked issue
 - "Implement KRE-xxx" → `get_issue` → implement acceptance criteria
-- "Implement Phase N" → follow `docs/TASKS.md` phase N
-- "Mark KRE-xxx done" → close in Linear + check `docs/TASKS.md` box
+- "Implement pivot Phase N" → follow `docs/PIVOT_PLAN.md` phase N
+- "Mark KRE-xxx done" → close in Linear + check `docs/PIVOT_PLAN.md` or `docs/TASKS.md` (legacy) box
 
 ## Linear
 
 - **Project:** [EventForge](https://linear.app/kreativbiro/project/eventforge-f35070f0931e) on team `Kreativbiro`
 - **Active work:** Linear MCP (`list_issues`, `get_issue`) — not just markdown
-- **Mirror:** `docs/TASKS.md` + `docs/LINEAR.md` issue index
+- **Mirror:** `docs/PIVOT_PLAN.md` (pivot) · `docs/TASKS.md` + `docs/LINEAR.md` (legacy)
 - **Next pivot work:** Phase 10 — polish & portfolio (see `docs/PIVOT_PLAN.md`)
 - **No AWS deploy** for pivot — LocalStack only (ADR-015)

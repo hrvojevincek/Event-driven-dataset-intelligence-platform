@@ -80,7 +80,7 @@ eventforge.project.submitted
 ### Support call annotation (demo default)
 
 Fields: `emotion`, `intent`, `topic`, `resolution_status`  
-Use with `fixtures/support-calls/*.txt` — plain-text transcripts, speech-flavored labels.
+Use with plain-text transcript uploads (`.txt`), speech-flavored labels.
 
 ### Document classification
 

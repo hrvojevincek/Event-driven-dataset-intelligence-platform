@@ -334,14 +334,14 @@ flowchart LR
     B --> C[Test via API/UI]
     C --> D{Pass?}
     D -->|No| A
-    D -->|Yes| E[Update TASKS.md checkbox]
+    D -->|Yes| E[Update PIVOT_PLAN.md checkbox]
     E --> F[Commit when ready]
 ```
 
-1. Pick task from `docs/TASKS.md`
+1. Pick task from `docs/PIVOT_PLAN.md`
 2. Implement with local hybrid setup
 3. Test end-to-end flow
-4. Mark task complete in `docs/TASKS.md`
+4. Mark task complete in `docs/PIVOT_PLAN.md`
 5. Commit when explicitly requested
 
 ---

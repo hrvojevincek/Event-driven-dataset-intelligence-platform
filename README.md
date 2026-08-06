@@ -214,7 +214,6 @@ event-driven/
 ├── infra/docker/             # LocalStack init, OTEL collector
 ├── infra/terraform/          # archived — not maintained for pivot (ADR-015)
 ├── fixtures/support-calls-audio/  # demo WAV fixtures + ASR smoke test
-├── fixtures/support-calls/   # demo transcript snippets
 └── docs/                     # pivot plan, architecture, ADRs, local dev
 ```
 
@@ -229,8 +228,11 @@ event-driven/
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)         | System design, event flows, diagrams                         |
 | [`docs/TECH_DECISIONS.md`](./docs/TECH_DECISIONS.md)     | ADRs (pivot ADR-014, local-only ADR-015)                     |
 | [`docs/LOCAL_DEV.md`](./docs/LOCAL_DEV.md)               | Troubleshooting and worker setup                             |
-| [`docs/TASKS.md`](./docs/TASKS.md)                       | Legacy phase roadmap (Phases 0–6)                            |
+| [`docs/CICD.md`](./docs/CICD.md)                         | Active CI + archived AWS deploy reference                    |
 | [`docs/ISSUES.md`](./docs/ISSUES.md)                     | Problems solved (STAR postmortems)                           |
+| [`docs/TASKS.md`](./docs/TASKS.md)                       | **Archived** — legacy research/AWS roadmap (Phases 0–6)      |
+| [`docs/LINEAR.md`](./docs/LINEAR.md)                     | **Archived** — legacy Linear issue index                     |
+| [`docs/PRD.md`](./docs/PRD.md)                           | **Archived** — legacy research PRD (rewrite in Phase 10)     |
 
 For Cursor agents: [AGENTS.md](./AGENTS.md) · [`.cursor/rules/`](./.cursor/rules/)
 
@@ -240,7 +242,7 @@ For Cursor agents: [AGENTS.md](./AGENTS.md) · [`.cursor/rules/`](./.cursor/rule
 
 EventForge previously ran on **ECS Fargate** in `eu-west-2`. Terraform and CI/CD workflows remain in the repo but are **not maintained** during the dataset pivot (ADR-015). Current target is **LocalStack + workers locally**.
 
-For historical deploy docs: [`docs/CICD.md`](./docs/CICD.md) · [`infra/terraform/README.md`](./infra/terraform/README.md)
+For historical deploy docs: [`docs/CICD.md`](./docs/CICD.md) (archived) · [`infra/terraform/README.md`](./infra/terraform/README.md)
 
 ---
 

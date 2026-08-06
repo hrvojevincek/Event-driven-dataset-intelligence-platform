@@ -34,7 +34,7 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 
 ### Demo fixture
 
-`fixtures/support-calls/` — plain-text transcript snippets · `fixtures/support-calls-audio/` — demo WAV files (ADR-016)
+`fixtures/support-calls-audio/` — demo WAV files (ADR-016)
 
 ---
 
@@ -260,7 +260,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 - [ ] Update `README.md` — new pitch + note: _Terraform/ECS built previously; pivot target is local-only_
 - [ ] Update `docs/ARCHITECTURE.md` — target pipeline diagram
-- [ ] Add `fixtures/support-calls/` + `scripts/demo-support-calls.sh`
+- [ ] Add demo fixture script (optional — `verify-pipeline-e2e.sh` generates temp transcript)
 - [ ] Update `docs/PRD.md` vision (brief)
 - [ ] Edge-case flags in QC (no HITL UI — v2)
 
@@ -271,7 +271,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 ## 5-minute demo script
 
 1. Open http://localhost:3000
-2. **New project** → upload `fixtures/support-calls/*.txt`
+2. **New project** → upload any `.txt` / `.md` / `.pdf` file
 3. Select template **Support call annotation** ( tweak JSON if desired)
 4. Watch React Flow: Intake → Preprocessing → Planning → Annotation (×N) → Export
 5. Show **QC panel**: coverage, flagged segments
@@ -291,7 +291,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 | API         | `api/routes/projects.py`                                                             |
 | Frontend    | `types/job-stream.ts`, `components/workflow/`, `components/dashboard/`               |
 | Local infra | `docker-compose.yml`, `infra/docker/localstack/init/`                                |
-| Fixtures    | `fixtures/support-calls/`, `fixtures/support-calls-audio/`                           |
+| Fixtures    | `fixtures/support-calls-audio/`                                                      |
 | Docs        | `docs/DATASET_PLATFORM.md`, `README.md`                                              |
 
 ---

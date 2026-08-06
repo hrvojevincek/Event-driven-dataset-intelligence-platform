@@ -51,7 +51,7 @@ make down                              # stop
 1. Surgical diffs — don't over-engineer
 2. Event schemas in `shared/events/` before backend code
 3. Production patterns: idempotency, DLQ, OTEL spans, cost tracking
-4. Update `docs/TASKS.md` checkboxes when done
+4. Update `docs/PIVOT_PLAN.md` checkboxes when completing pivot work
 5. Commit only when user explicitly requests
 6. **Docstrings on classes** — new or touched Python classes get a one-line docstring (see `backend-python.mdc`)
 

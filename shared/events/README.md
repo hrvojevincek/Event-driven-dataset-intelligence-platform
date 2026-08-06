@@ -18,7 +18,7 @@ project.submitted → intake.completed → preprocessing.completed → planning.
   → annotation.all_completed → export.completed
 ```
 
-Physical SQS queue names are unchanged (`eventforge-ingestion`, `eventforge-embedding`, etc.) until Phase 9.
+Physical SQS queue names: `eventforge-intake`, `eventforge-preprocessing`, `eventforge-planning`, `eventforge-annotation`, `eventforge-export` (see `infra/docker/localstack/init/`).
 
 ## Schema index
 

@@ -1,6 +1,6 @@
 # EventForge — System Architecture
 
-> **Pivot notice (2026-08):** This document still describes the **legacy research/RAG pipeline** (queries, ingestion, pgvector, synthesis).
+> **Pivot notice (2026-08):** This document still describes the **legacy research/RAG pipeline** (queries, ingestion, pgvector, synthesis). **Do not use for new work.**
 >
 > **Current product (dataset intelligence platform):** read [`DATASET_PLATFORM.md`](./DATASET_PLATFORM.md) first, then [`PIVOT_PLAN.md`](./PIVOT_PLAN.md) for phase status. Phase 10 will rewrite this file to match the intake → preprocessing → planning → annotation → export flow.
 

@@ -1,10 +1,12 @@
 # EventForge — Product Requirements Document
 
-> **Cursor agents:** Core context is in `.cursor/rules/eventforge-core.mdc` (always applied). This doc is deep product reference.
+> **ARCHIVED (legacy research/RAG product):** Describes the original research-query pipeline. **Current product:** [`docs/DATASET_PLATFORM.md`](./DATASET_PLATFORM.md). Brief PRD rewrite planned in pivot Phase 10.
+
+> **Cursor agents:** Core context is in `.cursor/rules/eventforge-core.mdc` (always applied).
 
 **Version:** 0.1 (MVP draft)  
 **Last updated:** 2025-06-20  
-**Status:** Phase 0 — Foundation
+**Status:** Archived — superseded by dataset pivot (ADR-014)
 
 ---
 

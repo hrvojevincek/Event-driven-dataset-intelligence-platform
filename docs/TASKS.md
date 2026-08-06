@@ -1,10 +1,10 @@
 # EventForge — Task Roadmap
 
-> **Cursor agents:** Check current phase here before implementing. Update checkboxes when done. Workflow rule: `.cursor/rules/docs-workflow.mdc`.
+> **ARCHIVED (legacy research pipeline):** This file tracks Phases 0–6 (research/RAG, AWS deploy). **Active work:** [`docs/PIVOT_PLAN.md`](./PIVOT_PLAN.md) · [`docs/DATASET_PLATFORM.md`](./DATASET_PLATFORM.md).
 
 Living roadmap for EventForge development. Structured for **Linear integration** — each phase maps to a Milestone; checkbox items map to Issues.
 
-**Linear (active):** [EventForge project](https://linear.app/kreativbiro/project/eventforge-f35070f0931e) — see `docs/LINEAR.md` for issue index.
+**Linear:** [EventForge project](https://linear.app/kreativbiro/project/eventforge-f35070f0931e) — see `docs/LINEAR.md` for legacy issue index.
 
 ---
 
@@ -317,10 +317,10 @@ Project: EventForge
 | 0     | Decisions & docs                  | ✅ Done |
 | 1     | Data model (drop pgvector)        | ✅ Done |
 | 2     | Event contracts                   | ✅ Done |
-| 3–7   | Pipeline stages (intake → export) | ⬜      |
-| 8     | Frontend (60/40 demo UX)          | ⬜      |
-| 9     | Local infra cleanup               | ⬜      |
-| 10    | README + demo fixture             | ⬜      |
+| 3–7   | Pipeline stages (intake → export) | ✅ Done |
+| 8     | Frontend (60/40 demo UX)          | ✅ Done |
+| 9     | Local infra cleanup               | ✅ Done |
+| 10    | README + demo fixture             | 🟡 In progress |
 
 **Pivot exit criteria:** Support-call fixture → JSONL + QC. LocalStack only. No Tavily/pgvector.
 
@@ -330,6 +330,6 @@ Project: EventForge
 
 ## Current Priority
 
-**Dataset pivot Phase 3** — Intake stage. See `docs/PIVOT_PLAN.md`.
+**Dataset pivot Phase 10** — polish & portfolio. See [`docs/PIVOT_PLAN.md`](./PIVOT_PLAN.md).
 
-Verify: `./scripts/verify-pipeline-e2e.sh` · `./scripts/verify-dlq-redrive.sh` · run DLQ worker: `uv run --project backend python -m eventforge.workers.dlq`
+Verify: `./scripts/verify-pipeline-e2e.sh` · `./scripts/verify-audio-pipeline.sh` · `./scripts/verify-dlq-redrive.sh`
