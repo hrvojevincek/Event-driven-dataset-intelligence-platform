@@ -73,8 +73,14 @@ Key local values (defaults work for Docker Compose):
 | `AWS_ACCESS_KEY_ID`     | `test`                                            |
 | `AWS_SECRET_ACCESS_KEY` | `test`                                            |
 | `NEXT_PUBLIC_API_URL`   | `http://localhost:8000`                           |
+| `ASR_PROVIDER`          | `local` (default) or `openai`                     |
+| `ASR_LOCAL_MODEL`       | `small` (faster-whisper; install `[asr]` extra) |
+| `ASR_DEVICE`            | `cpu`                                             |
+| `OPENAI_API_KEY`        | Required only when `ASR_PROVIDER=openai`          |
 
 When running backend **inside** docker-compose, use service names (`postgres`, `localstack`) as hosts. When running **natively** on your machine, use `localhost`.
+
+**Local ASR:** `cd backend && uv sync --extra asr` installs faster-whisper. CI and text-only dev skip this extra.
 
 ---
 
@@ -83,7 +89,9 @@ When running backend **inside** docker-compose, use service names (`postgres`, `
 There is **no login** (ADR-013). All API requests use a shared mock user (`mock-local-user`). No Bearer token required.
 
 ```bash
-./scripts/verify-pipeline-e2e.sh
+./scripts/verify-pipeline-e2e.sh      # text pipeline
+./scripts/verify-audio-pipeline.sh    # WAV + ASR (needs uv sync --extra asr)
+# or: make verify-e2e / make verify-audio
 ```
 
 **AWS dev:** the public ALB exposes an open API — portfolio/demo only; do not treat as production-ready.
@@ -274,6 +282,8 @@ uv run --project backend python -m eventforge.workers.ingestion
 ```
 
 **Tavily (Phase 3 ingestion):** set `TAVILY_API_KEY` in `.env` before running the ingestion worker or E2E smoke test. Without it, ingestion fails with a clear config error.
+
+**Audio (WAV preprocessing):** install the optional ASR extra and run workers with `ASR_PROVIDER=local` (default). Preprocessing queue visibility is 900s in LocalStack init for slow CPU transcription. Smoke test: `make verify-audio` with API + workers running.
 
 ### Hybrid dev loop (API + workers)
 
