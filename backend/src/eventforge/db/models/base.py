@@ -228,7 +228,7 @@ class Segment(Base):
     For ``domain=documents``, ``start_offset``/``end_offset`` are character offsets
     into the source text. For future ``domain=audio``, offsets MAY store milliseconds
     until dedicated ``start_ms``/``end_ms`` columns exist; put ASR metadata in
-    ``metadata_json`` (e.g. ``kind``, ``asr_model``, ``asr_confidence``, ``speaker_id``).
+    ``metadata_json`` (e.g. ``kind``, ``asr_model``, ``asr_avg_logprob``, ``speaker_id``).
     """
 
     __tablename__ = "segments"

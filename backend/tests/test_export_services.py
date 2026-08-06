@@ -293,7 +293,7 @@ def test_merge_batches_to_jsonl_includes_audio_fields_for_audio_project(
             metadata_json={
                 "kind": "audio_utterance",
                 "asr_model": "mock/test",
-                "asr_confidence": 0.91,
+                "asr_avg_logprob": -0.12,
             },
         ),
     ]
@@ -323,8 +323,68 @@ def test_merge_batches_to_jsonl_includes_audio_fields_for_audio_project(
     assert record["end_ms"] == 16_000
     assert record["content"] == "Customer asked about billing."
     assert record["provenance"]["asr_model"] == "mock/test"
-    assert record["provenance"]["asr_confidence"] == 0.91
+    assert record["provenance"]["asr_avg_logprob"] == -0.12
+    assert "asr_confidence" not in record["provenance"]
     assert "transcript" not in record
+
+
+def test_merge_batches_to_jsonl_maps_legacy_asr_confidence_to_avg_logprob(
+    support_schema: dict,
+) -> None:
+    project_id = uuid.uuid4()
+    asset_id = uuid.uuid4()
+    segment_id = uuid.uuid4()
+
+    project = Job(
+        id=project_id,
+        user_id=uuid.uuid4(),
+        correlation_id="corr-export-audio-legacy",
+        name="Audio calls",
+        schema_template="support_call_audio",
+        schema_json=support_schema,
+        domain="audio",
+        status=JobStatus.RUNNING.value,
+    )
+    asset = Asset(
+        id=asset_id,
+        job_id=project_id,
+        filename="call_001.wav",
+        mime_type="audio/wav",
+        storage_uri="uploads/project/call_001.wav",
+        fetch_status=AssetFetchStatus.OK.value,
+    )
+    segments = [
+        Segment(
+            id=segment_id,
+            job_id=project_id,
+            asset_id=asset_id,
+            segment_index=0,
+            content="Legacy metadata row.",
+            start_offset=0,
+            end_offset=16_000,
+            metadata_json={
+                "kind": "audio_utterance",
+                "asr_model": "faster-whisper/small",
+                "asr_confidence": -0.2191,
+            },
+        ),
+    ]
+    batches = [
+        AnnotationBatch(
+            job_id=project_id,
+            task_id=uuid.uuid4(),
+            task_index=0,
+            labels_json={str(segment_id): {"topic": "billing"}},
+            segment_count=1,
+            confidence=Decimal("0.8700"),
+        ),
+    ]
+
+    result = merge_batches_to_jsonl(project, batches, segments, {asset_id: asset})
+
+    record = json.loads(result.jsonl.splitlines()[0])
+    assert record["provenance"]["asr_avg_logprob"] == -0.2191
+    assert "asr_confidence" not in record["provenance"]
 
 
 def test_build_qc_report_flags_low_confidence_and_incomplete_coverage(

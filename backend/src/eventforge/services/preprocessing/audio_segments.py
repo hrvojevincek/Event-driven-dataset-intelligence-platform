@@ -76,14 +76,15 @@ def window_utterances(
         content = " ".join(part.text for part in window).strip()
         if not content:
             continue
-        avg_confidence = _average_confidence(window)
+        avg_logprob = _average_logprob(window)
         metadata: dict[str, Any] = {
             "kind": "audio_utterance",
             "asr_model": asr_model,
             "utterance_count": len(window),
         }
-        if avg_confidence is not None:
-            metadata["asr_confidence"] = round(avg_confidence, 4)
+        if avg_logprob is not None:
+            # faster-whisper avg_logprob is log-space, not 0–1 confidence
+            metadata["asr_avg_logprob"] = round(avg_logprob, 4)
         pieces.append(
             AudioSegmentPiece(
                 content=content,
@@ -113,7 +114,7 @@ def _expand_long_utterances(
                     text=text,
                     start_ms=utterance.start_ms,
                     end_ms=utterance.end_ms,
-                    confidence=utterance.confidence,
+                    avg_logprob=utterance.avg_logprob,
                 )
             )
             continue
@@ -124,7 +125,7 @@ def _expand_long_utterances(
                     text=text,
                     start_ms=utterance.start_ms,
                     end_ms=utterance.end_ms,
-                    confidence=utterance.confidence,
+                    avg_logprob=utterance.avg_logprob,
                 )
             )
             continue
@@ -146,7 +147,7 @@ def _expand_long_utterances(
                     text=" ".join(chunk_words),
                     start_ms=span_start,
                     end_ms=max(span_end, span_start + 1),
-                    confidence=utterance.confidence,
+                    avg_logprob=utterance.avg_logprob,
                 )
             )
     return expanded
@@ -174,8 +175,9 @@ def _merge_trailing_short_window(
     return merged
 
 
-def _average_confidence(window: list[Utterance]) -> float | None:
-    values = [item.confidence for item in window if item.confidence is not None]
+def _average_logprob(window: list[Utterance]) -> float | None:
+    """Mean utterance avg_logprob across the window (log-space, typically ≤ 0)."""
+    values = [item.avg_logprob for item in window if item.avg_logprob is not None]
     if not values:
         return None
     return sum(values) / len(values)

@@ -21,7 +21,7 @@ class Utterance:
     text: str
     start_ms: int
     end_ms: int
-    confidence: float | None = None
+    avg_logprob: float | None = None
 
 
 class ASRProvider(Protocol):
@@ -84,7 +84,7 @@ class FasterWhisperASR:
                         text=text,
                         start_ms=int(segment.start * 1000),
                         end_ms=int(segment.end * 1000),
-                        confidence=getattr(segment, "avg_logprob", None),
+                        avg_logprob=getattr(segment, "avg_logprob", None),
                     )
                 )
             span.set_attribute("asr.utterance_count", len(utterances))
