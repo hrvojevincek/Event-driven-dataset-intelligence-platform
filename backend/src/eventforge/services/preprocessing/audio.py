@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from eventforge.core.otel import agent_span
 from eventforge.db.models import Asset
 from eventforge.services.preprocessing.asr import ASRProvider
 from eventforge.services.preprocessing.audio_segments import AudioSegmentPiece, window_utterances
@@ -29,12 +30,15 @@ def transcribe_asset_to_segments(
         msg = f"ASR produced no segments for {asset.filename}"
         raise ValueError(msg)
 
-    pieces = window_utterances(
-        utterances,
-        asr_model=asr.model_name,
-        min_window_ms=min_window_ms,
-        max_window_ms=max_window_ms,
-    )
+    with agent_span("asr", "window_merge") as span:
+        span.set_attribute("asr.utterance_count", len(utterances))
+        pieces = window_utterances(
+            utterances,
+            asr_model=asr.model_name,
+            min_window_ms=min_window_ms,
+            max_window_ms=max_window_ms,
+        )
+        span.set_attribute("asr.segment_count", len(pieces))
     if not pieces:
         msg = f"ASR produced no segmentable transcript for {asset.filename}"
         raise ValueError(msg)

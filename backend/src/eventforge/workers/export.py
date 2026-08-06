@@ -1,11 +1,13 @@
 import logging
-from typing import Any
+from typing import Any, ClassVar
 
 from eventforge.core.config import get_settings
 from eventforge.events.parser import parse_eventbridge_sqs_body
+from eventforge.events.publisher import EVENT_SOURCE_EXPORT
 from eventforge.events.schemas.constants import (
     DETAIL_TYPE_ANNOTATION_ALL_COMPLETED,
     DETAIL_TYPE_ANNOTATION_TASK_COMPLETED,
+    WORKER_NAME_EXPORT,
 )
 from eventforge.stages.export import (
     parse_annotation_all_completed_event,
@@ -21,11 +23,14 @@ logger = logging.getLogger(__name__)
 class ExportWorker(StageWorker):
     """Consumes annotation.all_completed events and runs the export agent."""
 
+    worker_name: ClassVar[str] = WORKER_NAME_EXPORT
+    event_source: ClassVar[str] = EVENT_SOURCE_EXPORT
+
     def __init__(self) -> None:
         settings = get_settings()
         super().__init__(settings.export_queue_name, settings)
 
-    async def handle_message(self, message: dict[str, Any]) -> None:
+    async def process_message(self, message: dict[str, Any]) -> None:
         detail = parse_eventbridge_sqs_body(message["Body"])
         detail_type = detail.get("detail_type")
 

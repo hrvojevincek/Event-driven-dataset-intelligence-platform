@@ -39,7 +39,7 @@ function ExportPreviewLoaded({
   const preview = content ? formatExportPreview(content, PREVIEW_LINES) : null;
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           <span className="font-mono">{lineCount}</span> labeled rows in JSONL
@@ -69,7 +69,7 @@ function ExportPreviewLoaded({
         <p className="text-sm text-destructive">{previewError}</p>
       ) : null}
       {preview ? (
-        <pre className="max-h-64 overflow-auto rounded-lg border border-border bg-muted/20 p-3 font-mono text-xs leading-relaxed">
+        <pre className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-muted/20 p-3 font-mono text-xs leading-relaxed">
           {preview}
         </pre>
       ) : null}
@@ -114,7 +114,7 @@ export function ExportPreview({
 
   if (hasExport) {
     return (
-      <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+      <p className="flex flex-1 items-start rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
         JSONL preview and download appear when export completes.
       </p>
     );
@@ -122,14 +122,14 @@ export function ExportPreview({
 
   if (jobStatus === "failed") {
     return (
-      <p className="rounded-lg border border-dashed border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+      <p className="flex flex-1 items-start rounded-lg border border-dashed border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
         Pipeline failed before JSONL export was produced.
       </p>
     );
   }
 
   return (
-    <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+    <p className="flex flex-1 items-start rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
       JSONL preview and download appear when export completes.
     </p>
   );

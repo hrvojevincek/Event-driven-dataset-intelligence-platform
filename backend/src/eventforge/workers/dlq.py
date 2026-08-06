@@ -1,8 +1,10 @@
 import logging
-from typing import Any
+from typing import Any, ClassVar
 
 from eventforge.core.config import get_settings
 from eventforge.events.parser import parse_eventbridge_sqs_body
+from eventforge.events.publisher import EVENT_SOURCE_DLQ
+from eventforge.events.schemas.constants import WORKER_NAME_DLQ
 from eventforge.services.pipeline_failure import parse_failed_event_detail, process_pipeline_failure
 from eventforge.workers.bootstrap import main
 from eventforge.workers.stage_worker import StageWorker
@@ -13,11 +15,16 @@ logger = logging.getLogger(__name__)
 class DlqWorker(StageWorker):
     """Consumes poison messages from the DLQ and emits pipeline.failed events."""
 
+    worker_name: ClassVar[str] = WORKER_NAME_DLQ
+    event_source: ClassVar[str] = EVENT_SOURCE_DLQ
+    # DLQ already records failures; don't wrap process_message again.
+    record_terminal_failures: ClassVar[bool] = False
+
     def __init__(self) -> None:
         settings = get_settings()
         super().__init__(settings.dlq_queue_name, settings)
 
-    async def handle_message(self, message: dict[str, Any]) -> None:
+    async def process_message(self, message: dict[str, Any]) -> None:
         try:
             detail = parse_eventbridge_sqs_body(message["Body"])
             failed_event = parse_failed_event_detail(detail)

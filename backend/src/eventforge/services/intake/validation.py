@@ -13,6 +13,13 @@ from eventforge.services.intake.templates import allowed_extensions_for_template
 
 MAX_AUDIO_DURATION_SECONDS = 5 * 60
 
+_ALLOWED_MIME: dict[str, frozenset[str]] = {
+    ".pdf": frozenset({"application/pdf", "application/octet-stream"}),
+    ".wav": frozenset({"audio/wav", "audio/x-wav", "audio/wave", "application/octet-stream"}),
+}
+
+_EXTENSION_LABELS = {".pdf": "PDF", ".wav": "WAV"}
+
 
 @dataclass(frozen=True)
 class ValidatedUpload:
@@ -37,16 +44,18 @@ def detect_mime_type(filename: str, content: bytes) -> str:
     return "text/plain"
 
 
-def validate_upload(
+def _resolve_upload_type(
     filename: str,
     content: bytes,
     *,
     max_bytes: int,
-    schema_template: str | None = None,
-    max_audio_duration_seconds: int = MAX_AUDIO_DURATION_SECONDS,
-) -> ValidatedUpload:
-    """Ensure extension, size, MIME type, and audio duration are acceptable."""
+    schema_template: str | None,
+    max_audio_duration_seconds: int,
+) -> tuple[str, str, float | None, str]:
+    """Validate upload metadata; return extension, MIME type, duration, and basename."""
     extension = Path(filename).suffix.lower()
+    name = Path(filename).name
+
     allowed_extensions = allowed_extensions_for_template(schema_template)
     if extension not in allowed_extensions:
         allowed = ", ".join(sorted(allowed_extensions))
@@ -60,13 +69,14 @@ def validate_upload(
         raise ValueError(msg)
 
     mime_type = detect_mime_type(filename, content)
-    if extension == ".pdf" and mime_type not in {"application/pdf", "application/octet-stream"}:
-        msg = f"File '{filename}' is not a valid PDF"
+    allowed_mimes = _ALLOWED_MIME.get(extension)
+    if allowed_mimes is not None and mime_type not in allowed_mimes:
+        label = _EXTENSION_LABELS.get(extension, extension)
+        msg = f"File '{filename}' is not a valid {label}"
         raise ValueError(msg)
+
+    duration_seconds: float | None = None
     if extension == ".wav":
-        if mime_type not in {"audio/wav", "audio/x-wav", "audio/wave", "application/octet-stream"}:
-            msg = f"File '{filename}' is not a valid WAV"
-            raise ValueError(msg)
         try:
             duration_seconds = probe_wav_duration_seconds(content)
         except (wave.Error, ValueError) as exc:
@@ -80,18 +90,38 @@ def validate_upload(
             )
             raise ValueError(msg)
 
+    return extension, mime_type, duration_seconds, name
+
+
+def validate_upload(
+    filename: str,
+    content: bytes,
+    *,
+    max_bytes: int,
+    schema_template: str | None = None,
+    max_audio_duration_seconds: int = MAX_AUDIO_DURATION_SECONDS,
+) -> ValidatedUpload:
+    """Ensure extension, size, MIME type, and audio duration are acceptable."""
+    extension, mime_type, duration_seconds, name = _resolve_upload_type(
+        filename,
+        content,
+        max_bytes=max_bytes,
+        schema_template=schema_template,
+        max_audio_duration_seconds=max_audio_duration_seconds,
+    )
+
     content_hash = hashlib.sha256(content).hexdigest()
     provenance = {
-        "original_filename": Path(filename).name,
+        "original_filename": name,
         "content_hash_sha256": content_hash,
         "uploaded_at": datetime.now(tz=UTC).isoformat(),
         "mime_type": mime_type,
     }
-    if extension == ".wav":
+    if duration_seconds is not None:
         provenance["duration_seconds"] = round(duration_seconds, 3)
 
     return ValidatedUpload(
-        filename=Path(filename).name,
+        filename=name,
         mime_type=mime_type if extension != ".wav" else "audio/wav",
         byte_size=len(content),
         content_hash=content_hash,

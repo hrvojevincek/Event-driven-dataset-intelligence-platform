@@ -1,11 +1,13 @@
 import logging
-from typing import Any
+from typing import Any, ClassVar
 
 from eventforge.core.config import get_settings
 from eventforge.events.parser import parse_annotation_queue_message
+from eventforge.events.publisher import EVENT_SOURCE_ANNOTATION
 from eventforge.events.schemas.constants import (
     DETAIL_TYPE_ANNOTATION_TASK_DISPATCHED,
     DETAIL_TYPE_PLANNING_COMPLETED,
+    WORKER_NAME_ANNOTATION,
 )
 from eventforge.stages.annotation import (
     parse_annotation_task_dispatched_event,
@@ -23,11 +25,14 @@ logger = logging.getLogger(__name__)
 class AnnotationWorker(StageWorker):
     """Consumes planning.completed and annotation.task.dispatched events."""
 
+    worker_name: ClassVar[str] = WORKER_NAME_ANNOTATION
+    event_source: ClassVar[str] = EVENT_SOURCE_ANNOTATION
+
     def __init__(self) -> None:
         settings = get_settings()
         super().__init__(settings.annotation_queue_name, settings)
 
-    async def handle_message(self, message: dict[str, Any]) -> None:
+    async def process_message(self, message: dict[str, Any]) -> None:
         detail, task_token = parse_annotation_queue_message(message["Body"])
         detail_type = detail.get("detail_type")
 
