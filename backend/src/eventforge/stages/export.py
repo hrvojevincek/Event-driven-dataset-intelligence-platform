@@ -60,7 +60,14 @@ async def _load_or_create_export(
     assets = await AssetRepository(session).list_by_job_id(project_id)
     assets_by_id = {asset.id: asset for asset in assets}
 
-    merge_result = merge_batches_to_jsonl(project, batches, segments, assets_by_id)
+    annotator = await LLMUsageRepository(session).annotation_model_for_job(project_id)
+    merge_result = merge_batches_to_jsonl(
+        project,
+        batches,
+        segments,
+        assets_by_id,
+        annotator=annotator,
+    )
     total_cost = await LLMUsageRepository(session).total_cost_by_job_id(project_id)
     qc_report = build_qc_report(
         project=project,

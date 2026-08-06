@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,11 @@ import { useProjectDetail } from "@/hooks/use-projects";
 import { useJobStream } from "@/hooks/useJobStream";
 import { projectKeys } from "@/lib/project-keys";
 import { templateById } from "@/lib/schema-templates";
+import {
+  buildStageMap,
+  type JobStageSnapshot,
+  type StageStatus,
+} from "@/types/job-stream";
 
 type ProjectDetailLiveProps = {
   projectId: string;
@@ -50,6 +55,22 @@ export function ProjectDetailLive({ projectId }: ProjectDetailLiveProps) {
     templateById(detailQuery.data?.schema_template ?? null)?.label ??
     detailQuery.data?.schema_template ??
     "custom schema";
+
+  const mergedStages = useMemo(() => {
+    const fromApi = buildStageMap(
+      detailQuery.data?.stages?.map(
+        (stage): JobStageSnapshot => ({
+          stage: stage.stage,
+          status: stage.status as StageStatus,
+          started_at: stage.started_at ?? null,
+          completed_at: stage.completed_at ?? null,
+          duration_ms: stage.duration_ms ?? null,
+          error_detail: stage.error_detail ?? null,
+        }),
+      ),
+    );
+    return { ...fromApi, ...stream.stages };
+  }, [detailQuery.data?.stages, stream.stages]);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-6 md:p-10">
@@ -101,7 +122,10 @@ export function ProjectDetailLive({ projectId }: ProjectDetailLiveProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PipelineGraph stages={stream.stages} />
+            <PipelineGraph
+              stages={mergedStages}
+              jobStatus={displayStatus}
+            />
           </CardContent>
         </Card>
 
@@ -132,6 +156,7 @@ export function ProjectDetailLive({ projectId }: ProjectDetailLiveProps) {
           </CardHeader>
           <CardContent>
             <QcPanel
+              projectId={projectId}
               detail={detailQuery.data}
               jobStatus={displayStatus}
               isLoading={detailQuery.isLoading}

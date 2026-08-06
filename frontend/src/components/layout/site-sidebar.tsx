@@ -17,22 +17,22 @@ export function SiteSidebar({ className, onNavigate }: SiteSidebarProps) {
   return (
     <aside
       className={cn(
-        "flex h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
+        "flex h-full w-32 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
         className,
       )}
     >
-      <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+      <div className="flex h-14 items-center border-b border-sidebar-border px-2.5">
         <Link
           href="/"
           onClick={onNavigate}
-          className="font-mono text-sm font-medium tracking-tight"
+          className="font-mono text-xs font-medium tracking-tight"
         >
           <span className="text-primary">Event</span>Forge
         </Link>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 p-3">
-        <p className="px-2 pb-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+      <nav className="flex flex-1 flex-col gap-0.5 p-2">
+        <p className="px-1.5 pb-1 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
           Workspace
         </p>
         {mainNav.map(({ href, label, icon: Icon }) => {
@@ -47,28 +47,18 @@ export function SiteSidebar({ className, onNavigate }: SiteSidebarProps) {
               href={href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
+                "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
               )}
             >
-              <Icon className="size-4 shrink-0 opacity-80" />
-              {label}
+              <Icon className="size-3.5 shrink-0 opacity-80" />
+              <span className="truncate">{label}</span>
             </Link>
           );
         })}
-
       </nav>
-
-      <div className="border-t border-sidebar-border p-4">
-        <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          Pipeline
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Intake → Preprocessing → Planning → Annotation → Export
-        </p>
-      </div>
     </aside>
   );
 }

@@ -9,8 +9,6 @@ from typing import Any
 
 from eventforge.db.models import AnnotationBatch, Asset, Job, Segment
 
-ANNOTATOR_VERSION = "llm-v1"
-
 
 @dataclass(frozen=True)
 class ExportRecord:
@@ -122,6 +120,8 @@ def merge_batches_to_jsonl(
     batches: list[AnnotationBatch],
     segments: list[Segment],
     assets_by_id: dict[uuid.UUID, Asset],
+    *,
+    annotator: str | None = None,
 ) -> MergeResult:
     """Combine labeled batches into ordered JSONL for a project."""
     labels_by_segment: dict[uuid.UUID, tuple[dict[str, str], float]] = {}
@@ -152,7 +152,7 @@ def merge_batches_to_jsonl(
                 provenance={
                     "asset_filename": asset.filename if asset is not None else "unknown",
                     "project_id": str(project.id),
-                    "annotator": ANNOTATOR_VERSION,
+                    "annotator": annotator or "unknown",
                     "confidence": round(confidence, 4),
                 },
             )

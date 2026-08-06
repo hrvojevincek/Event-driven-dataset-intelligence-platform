@@ -1,3 +1,4 @@
+import re
 import uuid
 from decimal import Decimal
 
@@ -5,6 +6,9 @@ from sqlalchemy import func, select
 
 from eventforge.db.models import LLMUsage
 from eventforge.db.repositories.base import BaseRepository
+
+_MODEL_DATE_SUFFIX = re.compile(r"-\d{4}-\d{2}-\d{2}$")
+_LEGACY_ANNOTATION_AGENT = "research"
 
 
 class LLMUsageRepository(BaseRepository):
@@ -48,3 +52,19 @@ class LLMUsageRepository(BaseRepository):
         )
         total = result.scalar_one()
         return Decimal(str(total))
+
+    async def annotation_model_for_job(self, job_id: uuid.UUID) -> str | None:
+        """Return the most recent annotation LLM model for export provenance."""
+        from eventforge.events.schemas import WORKER_NAME_ANNOTATION
+
+        records = await self.list_by_job_id(job_id)
+        annotation_agents = {WORKER_NAME_ANNOTATION, _LEGACY_ANNOTATION_AGENT}
+        for record in reversed(records):
+            if record.agent_name in annotation_agents:
+                return _display_model_name(record.model)
+        return None
+
+
+def _display_model_name(model: str) -> str:
+    """Strip dated OpenAI model suffixes for stable provenance display."""
+    return _MODEL_DATE_SUFFIX.sub("", model)

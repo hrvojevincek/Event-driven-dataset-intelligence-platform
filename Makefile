@@ -1,4 +1,4 @@
-.PHONY: help dev down logs seed test lint hooks lint-backend lint-backend-fix verify-e2e verify-dlq verify-fullstack workers workers-overmind export-openapi codegen openapi
+.PHONY: help dev down logs seed test lint hooks precommit lint-backend lint-backend-fix verify-e2e verify-dlq verify-fullstack workers workers-overmind export-openapi codegen openapi
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -40,8 +40,11 @@ lint: ## Run linters
 	docker compose exec backend ruff check .
 	cd frontend && npm run lint
 
-hooks: ## Install pre-commit git hooks (ruff check on commit)
-	uv run --project backend pre-commit install
+hooks: ## Install pre-commit (manual stage; run via make precommit)
+	uv run --project backend pre-commit install --hook-type manual
+
+precommit: ## Run all pre-commit hooks (ruff + eslint)
+	uv run --project backend pre-commit run --all-files --hook-stage manual
 
 lint-backend: ## Run backend ruff locally (no docker)
 	uv run --project backend ruff check --config backend/pyproject.toml backend/

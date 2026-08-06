@@ -11,7 +11,10 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { JobStageSnapshot } from "@/types/job-stream";
+import {
+  defaultStageId,
+  type JobStageSnapshot,
+} from "@/types/job-stream";
 
 import { buildPipelineGraph } from "./build-pipeline-graph";
 import { PipelineEdge } from "./pipeline-edge";
@@ -23,11 +26,19 @@ const edgeTypes = { pipeline: PipelineEdge };
 
 type PipelineGraphProps = {
   stages: Record<string, JobStageSnapshot>;
+  jobStatus: string | null;
 };
 
-function PipelineGraphCanvas({ stages }: PipelineGraphProps) {
+function PipelineGraphCanvas({ stages, jobStatus }: PipelineGraphProps) {
   const { fitView } = useReactFlow();
-  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const [userSelectedStageId, setUserSelectedStageId] = useState<string | null>(
+    null,
+  );
+  const autoStageId = useMemo(
+    () => defaultStageId(jobStatus, stages),
+    [jobStatus, stages],
+  );
+  const selectedStageId = userSelectedStageId ?? autoStageId;
 
   const { nodes, edges } = useMemo(
     () => buildPipelineGraph(stages),
@@ -40,7 +51,7 @@ function PipelineGraphCanvas({ stages }: PipelineGraphProps) {
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node<PipelineNodeData>) => {
-      setSelectedStageId(node.id);
+      setUserSelectedStageId(node.id);
     },
     [],
   );

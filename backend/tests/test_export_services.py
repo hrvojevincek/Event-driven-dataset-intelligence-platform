@@ -195,6 +195,67 @@ def test_merge_batches_to_jsonl_uses_batch_confidence_for_canonical_labels_map(
     assert record["provenance"]["confidence"] == 0.87
 
 
+def test_merge_batches_to_jsonl_uses_annotator_model(support_schema: dict) -> None:
+    project_id = uuid.uuid4()
+    asset_id = uuid.uuid4()
+    segment_id = uuid.uuid4()
+
+    project = Job(
+        id=project_id,
+        user_id=uuid.uuid4(),
+        correlation_id="corr-export-annotator",
+        name="Support calls",
+        schema_template=SUPPORT_CALL_TEMPLATE,
+        schema_json=support_schema,
+        status=JobStatus.RUNNING.value,
+    )
+    asset = Asset(
+        id=asset_id,
+        job_id=project_id,
+        filename="call_001.txt",
+        mime_type="text/plain",
+        storage_uri="file:///tmp/call_001.txt",
+        fetch_status=AssetFetchStatus.OK.value,
+    )
+    segments = [
+        Segment(
+            id=segment_id,
+            job_id=project_id,
+            asset_id=asset_id,
+            segment_index=0,
+            content="First segment",
+        ),
+    ]
+    batches = [
+        AnnotationBatch(
+            job_id=project_id,
+            task_id=uuid.uuid4(),
+            task_index=0,
+            labels_json={
+                str(segment_id): {
+                    "emotion": "frustrated",
+                    "intent": "complaint",
+                    "topic": "billing",
+                    "resolution_status": "unresolved",
+                }
+            },
+            segment_count=1,
+            confidence=Decimal("0.8700"),
+        ),
+    ]
+
+    result = merge_batches_to_jsonl(
+        project,
+        batches,
+        segments,
+        {asset_id: asset},
+        annotator="gpt-4o-mini",
+    )
+
+    record = json.loads(result.jsonl.splitlines()[0])
+    assert record["provenance"]["annotator"] == "gpt-4o-mini"
+
+
 def test_build_qc_report_flags_low_confidence_and_incomplete_coverage(
     support_schema: dict,
 ) -> None:
