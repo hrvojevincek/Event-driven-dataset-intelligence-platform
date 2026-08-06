@@ -66,6 +66,7 @@ tmp/
 
 # Uploaded project files (local disk storage)
 data/uploads/
+backend/data/uploads/
 
 # Secrets
 *.pem

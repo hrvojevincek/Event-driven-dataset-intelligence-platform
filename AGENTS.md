@@ -34,7 +34,7 @@
 
 | Track | Status | Doc |
 | ----- | ------ | --- |
-| **Dataset pivot** | Phase 0 ✅ → Phase 1 next | `docs/PIVOT_PLAN.md` |
+| **Dataset pivot** | Phase 9 ✅ → Phase 10 next | `docs/PIVOT_PLAN.md` |
 | Legacy AWS (archived) | Terraform in repo, not maintained | ADR-015 |
 
 **Infra scope:** LocalStack + workers locally. No AWS deploy.

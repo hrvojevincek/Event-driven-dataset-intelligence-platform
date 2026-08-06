@@ -65,4 +65,6 @@ Define JSON Schema in `shared/events/` before the producer ships. Mirror as Pyda
 
 ## Queues (LocalStack + prod)
 
-`eventforge-ingestion`, `eventforge-embedding`, `eventforge-knowledge-mining`, `eventforge-research`, `eventforge-synthesis`, `eventforge-dlq`
+`eventforge-intake`, `eventforge-preprocessing`, `eventforge-planning`, `eventforge-annotation`, `eventforge-export`, `eventforge-dlq`
+
+Legacy queue names (`eventforge-ingestion`, etc.) may still exist in archived Terraform — not used by the dataset pivot.
