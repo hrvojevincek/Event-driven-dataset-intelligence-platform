@@ -10,7 +10,7 @@ alwaysApply: false
 
 | Service    | Port | Purpose                              |
 | ---------- | ---- | ------------------------------------ |
-| postgres   | 5432 | Postgres 16 + pgvector               |
+| postgres   | 5432 | Postgres 16 (OLTP)                   |
 | localstack | 4566 | EventBridge, SQS, Step Functions, S3 |
 
 Init script: `infra/docker/localstack/init/01-eventforge.sh` creates bus + queues.
@@ -31,7 +31,7 @@ environments/{dev,prod}
 
 ## LocalStack limits
 
-Step Functions Map state is limited locally. Use simplified research fan-out in Phase 2; real SF in Phase 5.
+Step Functions Map state is limited locally. Annotation fan-out uses simplified local mode (`ANNOTATION_ORCHESTRATION_MODE=local`).
 
 ## OTEL (Phase 4+)
 

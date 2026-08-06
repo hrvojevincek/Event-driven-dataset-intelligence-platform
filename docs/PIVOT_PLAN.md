@@ -16,9 +16,9 @@
 | --- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | **Primary goal** | Portfolio-first + BeatPulse-flavored hooks (schema, provenance, QC)                                                                          |
 | 2   | **Demo balance** | 60% live React Flow pipeline / 40% QC + JSONL export story                                                                                   |
-| 3   | **v1 domain**    | `.txt`, `.md`, `.pdf` in; **support-call transcript fixture** + speech-style labels out                                                      |
+| 3   | **v1 domain**    | `.txt`, `.md`, `.pdf`, `.wav` (audio via `support_call_audio` template) + support-call demo fixtures |
 | 4   | **Migration**    | Big-bang with vertical-slice milestones (delete research code as each stage lands)                                                           |
-| 5   | **Schema UX**    | Template picker + JSON override; 2 v1 templates (see below)                                                                                  |
+| 5   | **Schema UX**    | Template picker + JSON override; 3 v1 templates (see below)                                                                                  |
 | 6   | **File storage** | Local disk only (`./data/uploads/`); S3 deferred (no deploy)                                                                                 |
 | 7   | **Parallelism**  | Preprocessing sequential (single worker); annotation fan-out via Step Functions Map (local: simplified sequential where LocalStack is flaky) |
 | 8   | **Infra scope**  | **LocalStack yes** (EventBridge + SQS + workers). **AWS deploy no.** Terraform kept in repo, not maintained — README note only               |
@@ -26,14 +26,15 @@
 
 ### v1 schema templates
 
-1. **Support call annotation** — `emotion`, `intent`, `topic`, `resolution_status` (speech-flavored demo)
-2. **Document classification** — `category`, `summary`, `sensitivity_flag`
+1. **Support call annotation** — `emotion`, `intent`, `topic`, `resolution_status` (text transcripts)
+2. **Support call (audio)** — same label schema; WAV-only; `domain=audio` (ADR-016)
+3. **Document classification** — `category`, `summary`, `sensitivity_flag`
 
 Users pick a template, optionally edit JSON. No form builder in v1.
 
 ### Demo fixture
 
-`fixtures/support-calls/` — ~10 plain-text transcript snippets (`call_001.txt` …) submitted with the **Support call annotation** template.
+`fixtures/support-calls/` — plain-text transcript snippets · `fixtures/support-calls-audio/` — demo WAV files (ADR-016)
 
 ---
 
@@ -50,12 +51,12 @@ Users pick a template, optionally edit JSON. No form builder in v1.
 | 6     | Annotation stage    | ✅ Done        |
 | 7     | Export stage        | ✅ Done        |
 | 8     | Frontend pivot      | ✅ Done        |
-| 9     | Local infra cleanup | ⬜ Not started |
+| 9     | Local infra cleanup | ✅ Done |
 | 10    | Polish & portfolio  | ⬜ Not started |
 
 **Legend:** ⬜ Not started · 🟡 In progress · ✅ Done
 
-**Next:** Phase 9 — Local infra cleanup
+**Next:** Phase 10 — Polish & portfolio
 
 ---
 
@@ -233,15 +234,17 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 ---
 
-## Phase 9 — Local infra cleanup
+## Phase 9 — Local infra cleanup ✅
 
 **In scope (local only):**
 
-- [ ] Postgres image: `postgres:16` (drop pgvector)
-- [ ] Remove Tavily from `.env.example` and config
-- [ ] Update LocalStack init for new event routes
-- [ ] Update `scripts/verify-pipeline-e2e.sh` for project upload flow
-- [ ] Add `data/uploads/` to `.gitignore`
+- [x] Postgres image: `postgres:16` (drop pgvector)
+- [x] Remove Tavily from `.env.example` and config (backend already clean; docs updated)
+- [x] Update LocalStack init for new event routes
+- [x] Update `scripts/verify-pipeline-e2e.sh` for project upload flow
+- [x] Add `data/uploads/` and `backend/data/uploads/` to `.gitignore`
+- [x] Scrub pgvector/Tavily/legacy queue names from `LOCAL_DEV.md` and cursor rules
+- [x] Document ASR env vars in `.env.example`
 
 **Out of scope (archived — do not maintain):**
 
@@ -288,7 +291,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 | API         | `api/routes/projects.py`                                                             |
 | Frontend    | `types/job-stream.ts`, `components/workflow/`, `components/dashboard/`               |
 | Local infra | `docker-compose.yml`, `infra/docker/localstack/init/`                                |
-| Fixtures    | `fixtures/support-calls/`                                                            |
+| Fixtures    | `fixtures/support-calls/`, `fixtures/support-calls-audio/`                           |
 | Docs        | `docs/DATASET_PLATFORM.md`, `README.md`                                              |
 
 ---
@@ -306,7 +309,7 @@ Week 3: Phase 8–10 → UI, local cleanup, README + demo fixture
 
 ## v2 backlog
 
-- Real speech (Whisper + `.mp3`)
+- Additional audio formats (`.mp3`, diarization)
 - HITL review queue UI
 - Preprocessing Map state (one worker per asset)
 - S3 storage + AWS deploy (revive Terraform)

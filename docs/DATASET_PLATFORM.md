@@ -190,13 +190,14 @@ README note: *Phase 5 AWS infra was built earlier; pivot target is local-only de
 
 ## 12. Success criteria (MVP)
 
-- [ ] Upload support-call fixture (10 txt files) with Support call template
-- [ ] Pipeline runs end-to-end on LocalStack + workers
-- [ ] React Flow shows 5 new stages updating live
-- [ ] QC panel shows coverage + flagged segments
-- [ ] Download JSONL with provenance on every line
-- [ ] No pgvector, no Tavily
-- [ ] `./scripts/verify-pipeline-e2e.sh` passes (updated)
+- [x] Upload support-call fixture with Support call template
+- [x] Pipeline runs end-to-end on LocalStack + workers
+- [x] React Flow shows 5 stages updating live
+- [x] QC panel shows coverage + flagged segments
+- [x] Download JSONL with provenance on every line
+- [x] No pgvector, no Tavily
+- [x] `./scripts/verify-pipeline-e2e.sh` passes
+- [x] WAV audio pipeline (ADR-016): ASR → segments → JSONL with `start_ms` / `end_ms`
 
 ---
 

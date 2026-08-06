@@ -4,7 +4,7 @@
 
 ## What Is EventForge?
 
-**Pivoting (2026-08-04)** to an event-driven **dataset intelligence platform** — upload files + annotation schema → pipeline → labeled JSONL out. See `docs/DATASET_PLATFORM.md` and `docs/PIVOT_PLAN.md` (Phases 0–8 complete).
+**Pivoting (2026-08-04)** to an event-driven **dataset intelligence platform** — upload files + annotation schema → pipeline → labeled JSONL out. See `docs/DATASET_PLATFORM.md` and `docs/PIVOT_PLAN.md` (Phases 0–8 complete; Phase 9 in progress).
 
 **Read first:** `docs/DATASET_PLATFORM.md` · `docs/PIVOT_PLAN.md`
 
@@ -31,7 +31,7 @@ Next.js 15 + FastAPI + EventBridge/SQS/Step Functions + Postgres + OpenTelemetry
 ## Commands
 
 ```bash
-./scripts/setup-local.sh && make dev   # infra: Postgres (pgvector), LocalStack
+./scripts/setup-local.sh && make dev   # infra: Postgres 16, LocalStack
 make down / make logs
 ```
 

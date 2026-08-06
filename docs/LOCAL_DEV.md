@@ -10,7 +10,7 @@ How to run EventForge locally using Docker Compose, LocalStack, and native dev s
 
 | Tool             | Version | Purpose                                        |
 | ---------------- | ------- | ---------------------------------------------- |
-| Docker Desktop   | 4.x+    | Containers for Postgres (pgvector), LocalStack |
+| Docker Desktop   | 4.x+    | Containers for Postgres 16, LocalStack       |
 | Node.js          | 20 LTS  | Frontend dev server                            |
 | Python           | 3.12+   | Backend dev server                             |
 | uv (recommended) | latest  | Python package management                      |
@@ -34,13 +34,13 @@ make dev
 
 This starts:
 
-- **Postgres** (with pgvector) on `localhost:5432`
+- **Postgres 16** (OLTP) on `localhost:5432`
 - **LocalStack** on `localhost:4566` (EventBridge, SQS, Step Functions, S3)
 
 ### Verify Services
 
 ```bash
-# Postgres (includes pgvector extension)
+# Postgres
 docker compose exec postgres pg_isready -U eventforge
 
 # LocalStack
@@ -73,8 +73,15 @@ Key local values (defaults work for Docker Compose):
 | `AWS_ACCESS_KEY_ID`     | `test`                                            |
 | `AWS_SECRET_ACCESS_KEY` | `test`                                            |
 | `NEXT_PUBLIC_API_URL`   | `http://localhost:8000`                           |
+| `OPENAI_API_KEY`        | Required for annotation LLM calls + optional ASR  |
+| `ASR_PROVIDER`          | `local` (default) or `openai`                     |
+| `ASR_LOCAL_MODEL`       | `small` (faster-whisper; install `[asr]` extra) |
+| `ASR_DEVICE`            | `cpu`                                             |
+| `UPLOAD_ROOT`           | `backend/data/uploads` (local disk storage)       |
 
 When running backend **inside** docker-compose, use service names (`postgres`, `localstack`) as hosts. When running **natively** on your machine, use `localhost`.
+
+**Local ASR (WAV projects):** `cd backend && uv sync --extra asr` installs faster-whisper. Text-only dev and CI skip this extra.
 
 ---
 
@@ -83,7 +90,8 @@ When running backend **inside** docker-compose, use service names (`postgres`, `
 There is **no login** (ADR-013). All API requests use a shared mock user (`mock-local-user`). No Bearer token required.
 
 ```bash
-./scripts/verify-pipeline-e2e.sh
+./scripts/verify-pipeline-e2e.sh      # text pipeline (support_call template)
+# or: make verify-e2e
 ```
 
 **AWS dev:** the public ALB exposes an open API — portfolio/demo only; do not treat as production-ready.
@@ -143,7 +151,9 @@ npm run dev
 Init script `infra/docker/localstack/init/01-eventforge.sh` runs on LocalStack startup and creates:
 
 - EventBridge bus: `eventforge-bus`
-- SQS queues: `eventforge-ingestion`, `eventforge-embedding`, `eventforge-knowledge-mining`, `eventforge-research`, `eventforge-synthesis`, `eventforge-dlq`
+- SQS queues: `eventforge-intake`, `eventforge-preprocessing`, `eventforge-planning`, `eventforge-annotation`, `eventforge-export`, `eventforge-dlq`
+- EventBridge rules wiring dataset pivot events → stage queues (see `shared/events/`)
+- **Preprocessing visibility:** 900s (slow local ASR on CPU)
 - **Redrive policies:** each worker queue → `eventforge-dlq` with `maxReceiveCount: 3` (override via `SQS_MAX_RECEIVE_COUNT` in init env)
 
 Verify redrive policies after `make dev`:
@@ -166,7 +176,7 @@ If you have `awscli-local` installed:
 pip install awscli-local
 
 awslocal sqs send-message \
-  --queue-url http://localhost:4566/000000000000/eventforge-ingestion \
+  --queue-url http://localhost:4566/000000000000/eventforge-intake \
   --message-body '{"event_id":"test-1","correlation_id":"corr-1","job_id":"job-1"}'
 ```
 
@@ -207,20 +217,6 @@ cd backend && uv run alembic upgrade head
 
 ---
 
-## pgvector
-
-The Postgres image includes the `vector` extension. It is enabled via Alembic migration in Phase 1 (`CREATE EXTENSION IF NOT EXISTS vector`).
-
-Document chunks and embeddings are stored in Postgres (not a separate vector DB). Similarity search uses pgvector HNSW or IVFFlat indexes.
-
-### Verify extension (Phase 1+)
-
-```bash
-docker compose exec postgres psql -U eventforge -d eventforge -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
-```
-
----
-
 ## Observability (Phase 4+)
 
 When OTEL collector is added to docker-compose:
@@ -232,8 +228,8 @@ make dev   # starts postgres, localstack, otel-collector, jaeger, backend, front
 open http://localhost:16686
 ```
 
-Submit a query (UI or API), then search Jaeger by `correlation_id` or service name
-(`eventforge-api`, `eventforge-worker-ingestion`, etc.).
+Submit a project (UI or API), then search Jaeger by `correlation_id` or service name
+(`eventforge-api`, `eventforge-worker-intake`, etc.).
 
 Set in `.env`:
 
@@ -249,7 +245,7 @@ Disable locally with `OTEL_ENABLED=false`.
 
 ## Running Workers Locally (Phase 2+)
 
-Workers run as separate processes consuming SQS. Use the root `Procfile` to start all six at once.
+Workers run as separate processes consuming SQS. Use the root `Procfile` to start all five stage workers plus the DLQ monitor.
 
 **Recommended — Honcho** (included in backend dev deps, no extra install):
 
@@ -263,17 +259,19 @@ make workers
 ```bash
 brew install overmind
 make workers-overmind
-# overmind connect ingestion   # attach to one worker
-# overmind restart research    # restart after code change
+# overmind connect intake   # attach to one worker
+# overmind restart export   # restart after code change
 ```
 
 Run a single worker manually:
 
 ```bash
-uv run --project backend python -m eventforge.workers.ingestion
+uv run --project backend python -m eventforge.workers.intake
 ```
 
-**Tavily (Phase 3 ingestion):** set `TAVILY_API_KEY` in `.env` before running the ingestion worker or E2E smoke test. Without it, ingestion fails with a clear config error.
+**LLM keys:** set `OPENAI_API_KEY` in `.env` before running workers or `make verify-e2e`. Annotation uses the configured LLM; without a key the pipeline fails at the annotation stage.
+
+**Audio (WAV):** optional `uv sync --extra asr` for local faster-whisper ASR during preprocessing (`ASR_PROVIDER=local`, default).
 
 ### Hybrid dev loop (API + workers)
 
@@ -355,6 +353,8 @@ make down         # Stop all services
 make logs         # Tail logs
 make test         # Run tests (Phase 1+)
 make lint         # Run linters (Phase 1+)
+make verify-e2e   # Full text pipeline smoke test (API + workers required)
+make verify-dlq   # Confirm SQS redrive policies
 ./scripts/seed.sh # Seed sample data (Phase 1+)
 ```
 
@@ -364,9 +364,7 @@ make lint         # Run linters (Phase 1+)
 
 After infrastructure is verified:
 
-1. **Phase 1–3:** Backend API + real AI pipeline ✅
-2. **Phase 4.1:** SSE live updates on `/queries/[id]` ✅ ([KRE-151](https://linear.app/kreativbiro/issue/KRE-151))
-3. **Phase 4.2:** React Flow pipeline visualization ✅ ([KRE-152](https://linear.app/kreativbiro/issue/KRE-152))
-4. **Phase 4.3:** Dashboard UI — submit, history, synthesis, sources, cost ✅ ([KRE-153](https://linear.app/kreativbiro/issue/KRE-153))
-5. **Phase 4.4:** Sign-in UI removed — open API with mock user (ADR-013)
-6. **Phase 4.5:** Local OTEL — next
+1. **Pivot Phases 0–8:** Dataset platform pipeline ✅
+2. **Audio pipeline (ADR-016):** WAV intake → ASR → JSONL timing fields ✅
+3. **Phase 9:** Local infra cleanup (this doc + env hygiene) — in progress
+4. **Phase 10:** `ARCHITECTURE.md`, demo script, portfolio polish — next
