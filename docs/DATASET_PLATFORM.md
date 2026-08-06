@@ -31,9 +31,9 @@ Same conveyor-belt machinery (stages, workers, live dashboard). Different produc
 |------|----------|
 | **Goal** | Portfolio-first; BeatPulse hooks via custom schema + provenance + QC |
 | **Demo** | 60% live pipeline (React Flow) / 40% QC + JSONL export |
-| **v1 files** | `.txt`, `.md`, `.pdf` |
-| **Demo story** | Support-call transcript snippets + speech-style labels (no real audio yet) |
-| **Schema UX** | 2 templates + optional JSON override |
+| **v1 files** | `.txt`, `.md`, `.pdf`, `.wav` (audio via `support_call_audio` template) |
+| **Demo story** | Support-call transcripts (text or **WAV → ASR**) + speech-style labels |
+| **Schema UX** | 3 templates + optional JSON override |
 | **Labeling** | LLM pre-label (no human review UI in v1) |
 | **Infra** | LocalStack + workers locally; **no AWS deploy** |
 | **Storage** | Local disk (`./data/uploads/`) |

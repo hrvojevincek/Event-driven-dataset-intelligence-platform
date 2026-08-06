@@ -8,6 +8,7 @@ import {
   projectExportDownloadUrl,
   type ProjectDetail,
 } from "@/lib/api-client";
+import { formatExportPreview } from "@/lib/export-rows";
 
 type ExportPreviewProps = {
   projectId: string;
@@ -24,6 +25,7 @@ type ExportPreviewLoadedProps = {
   content: string | null;
   previewError: string | null;
   loadingPreview: boolean;
+  isAudioProject: boolean;
 };
 
 function ExportPreviewLoaded({
@@ -32,21 +34,16 @@ function ExportPreviewLoaded({
   content,
   previewError,
   loadingPreview,
+  isAudioProject,
 }: ExportPreviewLoadedProps) {
-  const preview = content
-    ? content
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .slice(0, PREVIEW_LINES)
-        .join("\n")
-    : null;
+  const preview = content ? formatExportPreview(content, PREVIEW_LINES) : null;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           <span className="font-mono">{lineCount}</span> labeled rows in JSONL
+          {isAudioProject ? " (includes start_ms / end_ms per row)" : null}
         </p>
         <Button
           variant="outline"
@@ -110,6 +107,7 @@ export function ExportPreview({
         content={content}
         previewError={error}
         loadingPreview={loadingPreview}
+        isAudioProject={detail?.domain === "audio"}
       />
     );
   }

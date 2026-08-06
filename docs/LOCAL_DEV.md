@@ -73,7 +73,7 @@ Key local values (defaults work for Docker Compose):
 | `AWS_ACCESS_KEY_ID`     | `test`                                            |
 | `AWS_SECRET_ACCESS_KEY` | `test`                                            |
 | `NEXT_PUBLIC_API_URL`   | `http://localhost:8000`                           |
-| `OPENAI_API_KEY`        | Required for annotation LLM calls + optional ASR  |
+| `OPENAI_API_KEY`        | Required for annotation LLM calls; also for `ASR_PROVIDER=openai` |
 | `ASR_PROVIDER`          | `local` (default) or `openai`                     |
 | `ASR_LOCAL_MODEL`       | `small` (faster-whisper; install `[asr]` extra) |
 | `ASR_DEVICE`            | `cpu`                                             |
@@ -91,7 +91,8 @@ There is **no login** (ADR-013). All API requests use a shared mock user (`mock-
 
 ```bash
 ./scripts/verify-pipeline-e2e.sh      # text pipeline (support_call template)
-# or: make verify-e2e
+./scripts/verify-audio-pipeline.sh    # WAV + ASR (needs uv sync --extra asr)
+# or: make verify-e2e / make verify-audio
 ```
 
 **AWS dev:** the public ALB exposes an open API — portfolio/demo only; do not treat as production-ready.
@@ -271,7 +272,7 @@ uv run --project backend python -m eventforge.workers.intake
 
 **LLM keys:** set `OPENAI_API_KEY` in `.env` before running workers or `make verify-e2e`. Annotation uses the configured LLM; without a key the pipeline fails at the annotation stage.
 
-**Audio (WAV):** optional `uv sync --extra asr` for local faster-whisper ASR during preprocessing (`ASR_PROVIDER=local`, default).
+**Audio (WAV):** optional `uv sync --extra asr` for local faster-whisper ASR during preprocessing (`ASR_PROVIDER=local`, default). Preprocessing queue visibility is 900s in LocalStack init for slow CPU transcription. Smoke test: `make verify-audio` with API + workers running.
 
 ### Hybrid dev loop (API + workers)
 
@@ -354,6 +355,7 @@ make logs         # Tail logs
 make test         # Run tests (Phase 1+)
 make lint         # Run linters (Phase 1+)
 make verify-e2e   # Full text pipeline smoke test (API + workers required)
+make verify-audio # WAV → ASR → JSONL smoke test (optional [asr] extra)
 make verify-dlq   # Confirm SQS redrive policies
 ./scripts/seed.sh # Seed sample data (Phase 1+)
 ```
@@ -366,5 +368,5 @@ After infrastructure is verified:
 
 1. **Pivot Phases 0–8:** Dataset platform pipeline ✅
 2. **Audio pipeline (ADR-016):** WAV intake → ASR → JSONL timing fields ✅
-3. **Phase 9:** Local infra cleanup (this doc + env hygiene) — in progress
+3. **Phase 9:** Local infra cleanup ✅
 4. **Phase 10:** `ARCHITECTURE.md`, demo script, portfolio polish — next
