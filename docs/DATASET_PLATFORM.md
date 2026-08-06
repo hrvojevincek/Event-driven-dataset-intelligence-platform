@@ -123,9 +123,14 @@ Stage IDs: `intake`, `preprocessing`, `planning`, `annotation`, `export`
     "project_id": "...",
     "annotator": "llm-v1",
     "confidence": 0.87
-  }
+  },
+  "audio_uri": "…/call_001.wav",
+  "start_ms": 0,
+  "end_ms": 16000
 }
 ```
+
+Audio rows may also include `provenance.asr_model` and `provenance.asr_avg_logprob` (Whisper average log-probability in log-space, typically negative — **not** a 0–1 confidence score).
 
 ---
 

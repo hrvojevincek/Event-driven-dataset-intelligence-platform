@@ -6,8 +6,8 @@ from eventforge.services.preprocessing.audio_segments import window_utterances
 
 def test_window_utterances_merges_short_spans() -> None:
     utterances = [
-        Utterance("Hello.", 0, 4_000, 0.9),
-        Utterance("I need help with billing.", 4_000, 12_000, 0.85),
+        Utterance("Hello.", 0, 4_000, -0.3),
+        Utterance("I need help with billing.", 4_000, 12_000, -0.5),
     ]
 
     pieces = window_utterances(
@@ -24,12 +24,13 @@ def test_window_utterances_merges_short_spans() -> None:
     assert "billing" in pieces[0].content
     assert pieces[0].metadata_json["kind"] == "audio_utterance"
     assert pieces[0].metadata_json["asr_model"] == "mock/test"
+    assert pieces[0].metadata_json["asr_avg_logprob"] == -0.4
 
 
 def test_window_utterances_splits_when_over_max_window() -> None:
     utterances = [
-        Utterance("First part.", 0, 20_000, 0.9),
-        Utterance("Second part.", 20_000, 50_000, 0.88),
+        Utterance("First part.", 0, 20_000, -0.2),
+        Utterance("Second part.", 20_000, 50_000, -0.4),
     ]
 
     pieces = window_utterances(

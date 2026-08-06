@@ -129,10 +129,13 @@ def _audio_provenance_extras(metadata: dict[str, Any] | None) -> dict[str, Any]:
     asr_model = metadata.get("asr_model")
     if isinstance(asr_model, str) and asr_model:
         extras["asr_model"] = asr_model
-    asr_confidence = metadata.get("asr_confidence")
-    if asr_confidence is not None:
+    asr_avg_logprob = metadata.get("asr_avg_logprob")
+    if asr_avg_logprob is None:
+        # Legacy segments stored faster-whisper log-prob as asr_confidence
+        asr_avg_logprob = metadata.get("asr_confidence")
+    if asr_avg_logprob is not None:
         try:
-            extras["asr_confidence"] = round(float(asr_confidence), 4)
+            extras["asr_avg_logprob"] = round(float(asr_avg_logprob), 4)
         except (TypeError, ValueError):
             pass
     return extras

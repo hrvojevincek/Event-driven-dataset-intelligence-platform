@@ -105,8 +105,8 @@ async def test_run_preprocessing_audio_writes_ms_segments(
     mock_publisher = AsyncMock(spec=EventPublisher)
     mock_asr = MockASR(
         utterances=[
-            Utterance("Customer called about a duplicate charge.", 0, 8_000, 0.91),
-            Utterance("Agent offered a refund.", 8_000, 16_000, 0.87),
+            Utterance("Customer called about a duplicate charge.", 0, 8_000, -0.21),
+            Utterance("Agent offered a refund.", 8_000, 16_000, -0.15),
         ]
     )
 
@@ -139,6 +139,7 @@ async def test_run_preprocessing_audio_writes_ms_segments(
     assert segment.metadata_json is not None
     assert segment.metadata_json["kind"] == "audio_utterance"
     assert segment.metadata_json["asr_model"] == "mock/test"
+    assert segment.metadata_json["asr_avg_logprob"] == -0.18
 
 
 async def test_run_preprocessing_audio_fails_on_empty_transcript(
