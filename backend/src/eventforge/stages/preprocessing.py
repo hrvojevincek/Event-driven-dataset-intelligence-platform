@@ -50,10 +50,10 @@ async def _load_or_create_segments(
         return existing
 
     segments: list[Segment] = []
-    asr_provider = asr or get_asr_provider(settings)
 
     for asset in assets:
         if is_audio_asset(asset):
+            asr_provider = asr or get_asr_provider(settings)
             pieces = transcribe_asset_to_segments(
                 asset,
                 storage,
