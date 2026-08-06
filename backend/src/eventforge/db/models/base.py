@@ -205,7 +205,7 @@ class Asset(Base):
     mime_type: Mapped[str] = mapped_column(String(128), nullable=False)
     storage_uri: Mapped[str] = mapped_column(String(2048), nullable=False)
     byte_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    provenance: Mapped[str | None] = mapped_column(Text, nullable=True)
+    provenance: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     fetch_status: Mapped[str] = mapped_column(
         String(32), nullable=False, default=AssetFetchStatus.PENDING.value
     )
@@ -220,7 +220,13 @@ class Asset(Base):
 
 
 class Segment(Base):
-    """Preprocessed text slice from an asset."""
+    """Preprocessed slice from an asset.
+
+    For ``domain=documents``, ``start_offset``/``end_offset`` are character offsets
+    into the source text. For future ``domain=audio``, offsets MAY store milliseconds
+    until dedicated ``start_ms``/``end_ms`` columns exist; put ASR metadata in
+    ``metadata_json`` (e.g. ``kind``, ``asr_model``, ``asr_confidence``, ``speaker_id``).
+    """
 
     __tablename__ = "segments"
     __table_args__ = (
@@ -248,7 +254,7 @@ class Segment(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     start_offset: Mapped[int | None] = mapped_column(Integer, nullable=True)
     end_offset: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -324,7 +330,11 @@ class AnnotationTaskSegment(Base):
 
 
 class AnnotationBatch(Base):
-    """Structured labels produced for one annotation task."""
+    """Structured labels produced for one annotation task.
+
+    ``labels_json`` maps each segment UUID (string key) to label fields matching
+    the job's ``schema_json``, e.g. ``{"<segment_id>": {"topic": "billing", ...}}``.
+    """
 
     __tablename__ = "annotation_batches"
     __table_args__ = (

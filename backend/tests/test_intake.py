@@ -86,7 +86,7 @@ async def _seed_project_with_assets(
             mime_type="text/plain",
             storage_uri=storage_uri,
             byte_size=len(content),
-            provenance='{"original_filename":"call.txt"}',
+            provenance={"original_filename": "call.txt"},
             fetch_status=AssetFetchStatus.PENDING.value,
         )
         db_session.add(asset)

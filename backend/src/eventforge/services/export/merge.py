@@ -34,7 +34,11 @@ class MergeResult:
 def _parse_batch_labels(
     labels_json: dict[str, Any] | str,
 ) -> list[tuple[uuid.UUID, dict[str, str], float]]:
-    """Parse AnnotationBatch.labels_json into per-segment label tuples."""
+    """Parse AnnotationBatch.labels_json into per-segment label tuples.
+
+    Accepts canonical segment-map shape ``{"<segment_id>": {...labels}}`` or the
+    legacy ``{"segments": [{"segment_id", "labels", "confidence"}]}`` array.
+    """
     if isinstance(labels_json, str):
         try:
             parsed = json.loads(labels_json)

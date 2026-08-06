@@ -135,7 +135,7 @@ async def submit_project(
             mime_type=validated.mime_type,
             storage_uri=storage_uri,
             byte_size=validated.byte_size,
-            provenance=validated.provenance_json,
+            provenance=validated.provenance,
             fetch_status=AssetFetchStatus.PENDING.value,
         )
         session.add(asset)
