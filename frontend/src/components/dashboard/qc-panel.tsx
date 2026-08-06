@@ -1,12 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
+import { LabelSummary } from "@/components/dashboard/label-summary";
 import { Badge } from "@/components/ui/badge";
-import { useProjectExport } from "@/hooks/use-project-export";
 import type { ProjectDetail } from "@/lib/api-client";
-import { parseExportJsonl, summarizeLabelFields } from "@/lib/export-rows";
 
 type QcPanelProps = {
   projectId: string;
@@ -17,68 +15,6 @@ type QcPanelProps = {
 
 function flagLabel(flag: string): string {
   return flag.replaceAll("_", " ");
-}
-
-function LabelSummary({
-  projectId,
-  exportReady,
-}: {
-  projectId: string;
-  exportReady: boolean;
-}) {
-  const { content, error, isLoading } = useProjectExport(projectId, exportReady);
-  const summaries = useMemo(() => {
-    if (!content) {
-      return [];
-    }
-    return summarizeLabelFields(parseExportJsonl(content));
-  }, [content]);
-
-  if (!exportReady || isLoading) {
-    return null;
-  }
-
-  if (error) {
-    return (
-      <p className="text-xs text-destructive">{error}</p>
-    );
-  }
-
-  if (summaries.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="space-y-3 border-t border-border pt-4">
-      <p className="text-xs font-medium text-muted-foreground">Label summary</p>
-      <div className="space-y-3">
-        {summaries.map((summary) => (
-          <div key={summary.field} className="space-y-1.5">
-            <p className="text-xs font-medium">{summary.field}</p>
-            {summary.kind === "unique" ? (
-              <p className="font-mono text-xs text-muted-foreground">
-                {summary.uniqueCount} unique
-              </p>
-            ) : (
-              <dl className="space-y-1 font-mono text-xs text-muted-foreground">
-                {Object.entries(summary.counts)
-                  .sort((left, right) => right[1] - left[1])
-                  .map(([value, count]) => (
-                    <div
-                      key={value}
-                      className="flex items-center justify-between gap-3"
-                    >
-                      <dt className="truncate">{value}</dt>
-                      <dd className="shrink-0">{count}</dd>
-                    </div>
-                  ))}
-              </dl>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 export function QcPanel({
