@@ -504,6 +504,23 @@ Phase 5 built Terraform modules for ECS, RDS, EventBridge, etc. During the datas
 
 ---
 
+## ADR-016: WAV Audio Pipeline (v1)
+
+**Status:** Accepted  
+**Date:** 2026-08-06
+
+### Decision
+
+- **Formats:** `.wav` only for audio projects
+- **Domain:** `Job.domain = "audio"` with `schema_template = "support_call_audio"` (shared label schema with text support calls)
+- **ASR:** `faster-whisper` local default; `ASR_PROVIDER=openai` opt-in (Phase 2)
+- **Offsets:** `Segment.start_offset` / `end_offset` store **milliseconds** for audio; character offsets for documents
+- **Segments:** Merge/split Whisper utterances into ~15–45s windows before planning
+- **Export:** Keep `content`; add `audio_uri`, `start_ms`, `end_ms` for audio domain only
+- **Limits:** 5-minute max duration at intake; no diarization; LLM sees transcript text only
+
+---
+
 ## Decision Log
 
 | ADR | Title                              | Status               |
@@ -523,3 +540,4 @@ Phase 5 built Terraform modules for ECS, RDS, EventBridge, etc. During the datas
 | 013 | No Authentication (MVP)            | Accepted             |
 | 014 | Dataset Intelligence Pivot         | Accepted             |
 | 015 | Local-Only Scope (No AWS Deploy)   | Accepted             |
+| 016 | WAV Audio Pipeline (v1)            | Accepted             |

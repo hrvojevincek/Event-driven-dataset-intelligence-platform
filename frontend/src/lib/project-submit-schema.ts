@@ -10,7 +10,6 @@ const TEMPLATE_IDS = SCHEMA_TEMPLATES.map((template) => template.id) as [
   ...SchemaTemplateId[],
 ];
 
-const ALLOWED_EXTENSIONS = [".txt", ".md", ".pdf"];
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const MAX_FILES = 50;
 
@@ -30,6 +29,11 @@ function isValidJsonObject(value: string): boolean {
   }
 }
 
+function allowedExtensionsForTemplate(templateId: SchemaTemplateId): string[] {
+  const template = SCHEMA_TEMPLATES.find((entry) => entry.id === templateId);
+  return template?.acceptedExtensions ?? [".txt", ".md", ".pdf"];
+}
+
 export const projectSubmitSchema = z
   .object({
     name: z.string().trim().min(1, "Project name is required"),
@@ -42,35 +46,36 @@ export const projectSubmitSchema = z
       .refine(
         (files) => files.length <= MAX_FILES,
         `Maximum ${MAX_FILES} files allowed`,
-      )
-      .superRefine((files, ctx) => {
-        for (const file of files) {
-          const extension = fileExtension(file.name);
-          if (!ALLOWED_EXTENSIONS.includes(extension)) {
-            ctx.addIssue({
-              code: "custom",
-              message: `Unsupported file type: ${file.name}`,
-            });
-            return;
-          }
-          if (file.size === 0) {
-            ctx.addIssue({
-              code: "custom",
-              message: `File is empty: ${file.name}`,
-            });
-            return;
-          }
-          if (file.size > MAX_FILE_BYTES) {
-            ctx.addIssue({
-              code: "custom",
-              message: `File exceeds 50 MB: ${file.name}`,
-            });
-            return;
-          }
-        }
-      }),
+      ),
     schemaOverride: z.string(),
     showJsonEditor: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    const allowedExtensions = allowedExtensionsForTemplate(data.templateId);
+    for (const file of data.files) {
+      const extension = fileExtension(file.name);
+      if (!allowedExtensions.includes(extension)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Unsupported file type for this template: ${file.name}`,
+        });
+        return;
+      }
+      if (file.size === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: `File is empty: ${file.name}`,
+        });
+        return;
+      }
+      if (file.size > MAX_FILE_BYTES) {
+        ctx.addIssue({
+          code: "custom",
+          message: `File exceeds 50 MB: ${file.name}`,
+        });
+        return;
+      }
+    }
   })
   .superRefine((data, ctx) => {
     if (!data.showJsonEditor || !data.schemaOverride.trim()) {
@@ -88,6 +93,9 @@ export const projectSubmitSchema = z
 export type ProjectSubmitInput = z.infer<typeof projectSubmitSchema>;
 
 export function domainForTemplate(templateId: SchemaTemplateId): string {
+  if (templateId === "support_call_audio") {
+    return "audio";
+  }
   return templateId === "support_call" ? "support_calls" : "documents";
 }
 
@@ -106,4 +114,13 @@ export function buildProjectSubmitFormData(data: ProjectSubmitInput): FormData {
   }
 
   return formData;
+}
+
+export function acceptAttributeForTemplate(templateId: SchemaTemplateId): string {
+  const template = SCHEMA_TEMPLATES.find((entry) => entry.id === templateId);
+  return template?.acceptMime ?? ".txt,.md,.pdf";
+}
+
+export function supportedFormatsLabel(templateId: SchemaTemplateId): string {
+  return allowedExtensionsForTemplate(templateId).join(", ");
 }

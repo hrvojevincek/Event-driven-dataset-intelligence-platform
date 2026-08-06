@@ -39,7 +39,7 @@ from eventforge.db.repositories import (
 )
 from eventforge.events.publisher import EVENT_SOURCE_API, PUBLISHER_WORKER_NAME, EventPublisher
 from eventforge.events.schemas import build_project_submitted_event
-from eventforge.services.intake import resolve_schema, validate_upload
+from eventforge.services.intake import domain_for_template, resolve_schema, validate_upload
 from eventforge.services.storage.local import LocalStorage, get_local_storage
 
 logger = logging.getLogger(__name__)
@@ -95,6 +95,7 @@ async def submit_project(
         schema_template=schema_template,
         schema_json=schema_json,
     )
+    resolved_domain = domain_for_template(template_id)
 
     job_id = uuid.uuid4()
     correlation_id = uuid.uuid4().hex
@@ -107,7 +108,7 @@ async def submit_project(
         description=None,
         schema_json=resolved_schema,
         schema_template=template_id,
-        domain=domain,
+        domain=resolved_domain,
         status=JobStatus.PENDING.value,
     )
     session.add(job)
@@ -127,6 +128,7 @@ async def submit_project(
             upload.filename,
             upload.content,
             max_bytes=max_bytes,
+            schema_template=template_id,
         )
         _, storage_uri = store.save_bytes(job_id, validated.filename, upload.content)
         asset = Asset(
@@ -149,7 +151,7 @@ async def submit_project(
         name=name,
         schema_json=resolved_schema,
         schema_template=template_id,
-        domain=domain,
+        domain=resolved_domain,
         asset_count=len(assets),
     )
 
