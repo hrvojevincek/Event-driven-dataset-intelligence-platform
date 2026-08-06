@@ -81,7 +81,10 @@ class User(Base):
 
 
 class Job(Base):
-    """A dataset project and its overall pipeline state."""
+    """A dataset project and its overall pipeline state.
+
+    ``domain`` stores the project content domain (e.g. ``documents``, ``audio``).
+    """
 
     __tablename__ = "jobs"
 

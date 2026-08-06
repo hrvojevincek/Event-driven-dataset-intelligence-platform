@@ -61,7 +61,6 @@ async def test_create_project_stores_assets_and_publishes(
         data={
             "name": "Support calls batch",
             "schema_template": "support_call",
-            "domain": "support_calls",
         },
         files=[
             ("files", ("call_001.txt", b"Customer: I need a refund.", "text/plain")),
@@ -96,6 +95,7 @@ async def test_create_project_stores_assets_and_publishes(
 
     job = await db_session.get(Job, job_id)
     assert job is not None
+    assert job.domain == "support_calls"
     schema = job.schema_json
     assert "emotion" in schema["properties"]
 
@@ -109,6 +109,56 @@ async def test_create_project_rejects_unsupported_extension(client: AsyncClient)
         "/api/v1/projects",
         data={"name": "Bad upload", "schema_template": "support_call"},
         files=[("files", ("virus.exe", b"bad", "application/octet-stream"))],
+    )
+    assert response.status_code == 422
+    assert "Unsupported file type" in response.json()["message"]
+
+
+async def test_create_audio_project_stores_wav_and_sets_domain(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    upload_root: Path,
+) -> None:
+    fixture = (
+        Path(__file__).resolve().parents[2] / "fixtures" / "support-calls-audio" / "call_001.wav"
+    )
+    wav_bytes = fixture.read_bytes()
+
+    response = await client.post(
+        "/api/v1/projects",
+        data={
+            "name": "Audio support calls",
+            "schema_template": "support_call_audio",
+        },
+        files=[("files", ("call_001.wav", wav_bytes, "audio/wav"))],
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    job_id = uuid.UUID(body["job_id"])
+
+    job = await db_session.get(Job, job_id)
+    assert job is not None
+    assert job.domain == "audio"
+    assert job.schema_template == "support_call_audio"
+
+    asset_count = await db_session.scalar(
+        select(func.count()).select_from(Asset).where(Asset.job_id == job_id)
+    )
+    assert asset_count == 1
+
+    project_dir = upload_root / str(job_id)
+    assert (project_dir / "call_001.wav").exists()
+
+
+async def test_create_project_rejects_wav_with_text_template(client: AsyncClient) -> None:
+    fixture = (
+        Path(__file__).resolve().parents[2] / "fixtures" / "support-calls-audio" / "call_001.wav"
+    )
+    response = await client.post(
+        "/api/v1/projects",
+        data={"name": "Wrong template", "schema_template": "support_call"},
+        files=[("files", ("call_001.wav", fixture.read_bytes(), "audio/wav"))],
     )
     assert response.status_code == 422
     assert "Unsupported file type" in response.json()["message"]

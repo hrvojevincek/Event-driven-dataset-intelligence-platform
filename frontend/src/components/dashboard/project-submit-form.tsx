@@ -18,8 +18,10 @@ import { Label } from "@/components/ui/label";
 import { useSubmitProject } from "@/hooks/use-projects";
 import { ApiError } from "@/lib/api-client";
 import {
+  acceptAttributeForTemplate,
   buildProjectSubmitFormData,
   projectSubmitSchema,
+  supportedFormatsLabel,
 } from "@/lib/project-submit-schema";
 import {
   SCHEMA_TEMPLATES,
@@ -45,6 +47,8 @@ export function ProjectSubmitForm() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const selectedTemplate = SCHEMA_TEMPLATES.find((t) => t.id === templateId);
+  const fileAccept = acceptAttributeForTemplate(templateId);
+  const supportedFormats = supportedFormatsLabel(templateId);
 
   function clearFieldError(field: keyof FieldErrors) {
     setFieldErrors((current) => {
@@ -131,8 +135,8 @@ export function ProjectSubmitForm() {
         <CardHeader>
           <CardTitle>Project setup</CardTitle>
           <CardDescription>
-            Upload files and pick an annotation schema template. Supported:
-            .txt, .md, .pdf.
+            Upload files and pick an annotation schema template. Supported for
+            this template: {supportedFormats}.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -161,7 +165,7 @@ export function ProjectSubmitForm() {
               name="files"
               type="file"
               multiple
-              accept=".txt,.md,.pdf,text/plain,text/markdown,application/pdf"
+              accept={fileAccept}
               onChange={(event) => {
                 setFiles(event.target.files);
                 clearFieldError("files");
@@ -179,7 +183,7 @@ export function ProjectSubmitForm() {
 
           <fieldset className="space-y-3">
             <legend className="text-sm font-medium">Schema template</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {SCHEMA_TEMPLATES.map((template) => (
                 <label
                   key={template.id}

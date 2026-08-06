@@ -36,7 +36,6 @@ async def create_project(
     files: list[UploadFile] = File(...),
     schema_template: str | None = Form(default=None),
     schema_json_override: str | None = Form(default=None),
-    domain: str = Form(default="documents"),
     db: AsyncSession = Depends(get_db),
     publisher: EventPublisher = Depends(get_publisher),
     current_user: User = Depends(get_current_user),
@@ -70,7 +69,6 @@ async def create_project(
             uploads=uploads,
             schema_template=schema_template,
             schema_json=parsed_schema,
-            domain=domain,
         )
     except ValueError as exc:
         await db.rollback()
