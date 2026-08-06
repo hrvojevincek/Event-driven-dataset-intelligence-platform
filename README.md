@@ -156,7 +156,32 @@ curl "http://localhost:8000/api/v1/projects/{job_id}/export?format=qc"
 curl -N http://localhost:8000/api/v1/projects/{job_id}/stream
 ```
 
-E2E script: `./scripts/verify-pipeline-e2e.sh` (updated in Phase 9)
+E2E script: `./scripts/verify-pipeline-e2e.sh` (text) · `./scripts/verify-audio-pipeline.sh` (WAV + ASR)
+
+### Audio pipeline (WAV)
+
+Upload `.wav` files with the **Support call (audio)** template (`schema_template=support_call_audio`). Preprocessing runs local ASR (default) and export JSONL includes `audio_uri`, `start_ms`, and `end_ms`.
+
+```bash
+# Install local ASR (optional extra — not required for text-only dev)
+cd backend && uv sync --extra asr
+
+# Env (defaults shown)
+# ASR_PROVIDER=local          # or openai (needs OPENAI_API_KEY)
+# ASR_LOCAL_MODEL=small
+# ASR_DEVICE=cpu
+
+# Submit via API
+curl -X POST http://localhost:8000/api/v1/projects \
+  -F "name=Audio demo" \
+  -F "schema_template=support_call_audio" \
+  -F "files=@fixtures/support-calls-audio/call_001.wav"
+
+# Full smoke test (workers + API must be running)
+make verify-audio
+```
+
+Fixtures: `fixtures/support-calls-audio/` · ADR: `docs/TECH_DECISIONS.md` (ADR-016)
 
 OpenAPI docs: http://localhost:8000/docs · regenerate frontend types: `make openapi`
 
@@ -172,7 +197,7 @@ event-driven/
 │   ├── services/
 │   │   ├── storage/          # local file uploads
 │   │   ├── intake/           # validation + schema templates
-│   │   ├── preprocessing/    # extract + segment (txt, md, pdf)
+│   │   ├── preprocessing/    # extract + segment (txt, md, pdf) + ASR (wav)
 │   │   ├── planning/         # task batching from schema
 │   │   ├── annotation/       # LLM labeler
 │   │   ├── export/           # JSONL merge + QC
@@ -188,7 +213,8 @@ event-driven/
 │   └── types/api.ts          # generated from OpenAPI (npm run codegen)
 ├── infra/docker/             # LocalStack init, OTEL collector
 ├── infra/terraform/          # archived — not maintained for pivot (ADR-015)
-├── fixtures/support-calls/   # demo transcript snippets (Phase 10)
+├── fixtures/support-calls-audio/  # demo WAV fixtures + ASR smoke test
+├── fixtures/support-calls/   # demo transcript snippets
 └── docs/                     # pivot plan, architecture, ADRs, local dev
 ```
 

@@ -15,3 +15,18 @@ export function parseExportJsonl(content: string): ExportRow[] {
     .filter(Boolean)
     .map((line) => JSON.parse(line) as ExportRow);
 }
+
+/** Pretty-print export rows for the dashboard preview panel. */
+export function formatExportPreview(content: string, maxRows = 5): string {
+  return parseExportJsonl(content)
+    .slice(0, maxRows)
+    .map((row) => JSON.stringify(row, null, 2))
+    .join("\n\n");
+}
+
+export function formatAudioTiming(row: ExportRow): string | null {
+  if (row.start_ms == null || row.end_ms == null) {
+    return null;
+  }
+  return `${row.start_ms}ms – ${row.end_ms}ms`;
+}
