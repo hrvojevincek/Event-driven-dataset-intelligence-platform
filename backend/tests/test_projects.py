@@ -61,7 +61,6 @@ async def test_create_project_stores_assets_and_publishes(
         data={
             "name": "Support calls batch",
             "schema_template": "support_call",
-            "domain": "support_calls",
         },
         files=[
             ("files", ("call_001.txt", b"Customer: I need a refund.", "text/plain")),
@@ -96,6 +95,7 @@ async def test_create_project_stores_assets_and_publishes(
 
     job = await db_session.get(Job, job_id)
     assert job is not None
+    assert job.domain == "support_calls"
     schema = job.schema_json
     assert "emotion" in schema["properties"]
 
@@ -129,7 +129,6 @@ async def test_create_audio_project_stores_wav_and_sets_domain(
         data={
             "name": "Audio support calls",
             "schema_template": "support_call_audio",
-            "domain": "documents",
         },
         files=[("files", ("call_001.wav", wav_bytes, "audio/wav"))],
     )

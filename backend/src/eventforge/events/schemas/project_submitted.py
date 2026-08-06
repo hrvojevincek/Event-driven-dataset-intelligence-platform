@@ -12,7 +12,7 @@ from eventforge.events.schemas.envelope import EventEnvelope
 
 
 class ProjectSubmittedPayload(BaseModel):
-    """Business data for the first pipeline stage — mirrors jobs.name / schema / domain."""
+    """Business data for the first pipeline stage — mirrors project name, schema, and domain."""
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 

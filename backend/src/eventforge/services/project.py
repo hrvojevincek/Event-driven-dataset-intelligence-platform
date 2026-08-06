@@ -73,7 +73,6 @@ async def submit_project(
     uploads: list[UploadPayload],
     schema_template: str | None = None,
     schema_json: dict | None = None,
-    domain: str = "documents",
     storage: LocalStorage | None = None,
     max_upload_file_bytes: int | None = None,
     max_upload_files: int | None = None,

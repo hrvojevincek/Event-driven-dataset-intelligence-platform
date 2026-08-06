@@ -138,7 +138,6 @@ curl http://localhost:8000/health
 curl -X POST http://localhost:8000/api/v1/projects \
   -F "name=Support calls batch" \
   -F "schema_template=support_call" \
-  -F "domain=support_calls" \
   -F "files=@call_001.txt"
 
 # List projects

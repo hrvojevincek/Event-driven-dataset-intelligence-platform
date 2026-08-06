@@ -9,7 +9,7 @@
     "name": {
       "type": "string",
       "minLength": 1,
-      "description": "Human-readable project name; maps to jobs.name."
+      "description": "Human-readable project name; persisted on the Job row (jobs.name)."
     },
     "schema_json": {
       "type": "object",
@@ -18,13 +18,13 @@
     "schema_template": {
       "type": "string",
       "maxLength": 64,
-      "description": "Optional preset template id, e.g. support_call or document_classification."
+      "description": "Optional preset template id, e.g. support_call, support_call_audio, or document_classification."
     },
     "domain": {
       "type": "string",
       "maxLength": 32,
       "default": "documents",
-      "description": "Content domain for the project; maps to jobs.domain."
+      "description": "Project content domain (e.g. documents, audio); persisted on Job.domain."
     },
     "asset_count": {
       "type": "integer",

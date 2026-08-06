@@ -92,18 +92,10 @@ export const projectSubmitSchema = z
 
 export type ProjectSubmitInput = z.infer<typeof projectSubmitSchema>;
 
-export function domainForTemplate(templateId: SchemaTemplateId): string {
-  if (templateId === "support_call_audio") {
-    return "audio";
-  }
-  return templateId === "support_call" ? "support_calls" : "documents";
-}
-
 export function buildProjectSubmitFormData(data: ProjectSubmitInput): FormData {
   const formData = new FormData();
   formData.append("name", data.name);
   formData.append("schema_template", data.templateId);
-  formData.append("domain", domainForTemplate(data.templateId));
 
   if (data.showJsonEditor && data.schemaOverride.trim()) {
     formData.append("schema_json_override", data.schemaOverride.trim());

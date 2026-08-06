@@ -512,7 +512,7 @@ Phase 5 built Terraform modules for ECS, RDS, EventBridge, etc. During the datas
 ### Decision
 
 - **Formats:** `.wav` only for audio projects
-- **Domain:** `Job.domain = "audio"` with `schema_template = "support_call_audio"` (shared label schema with text support calls)
+- **Domain:** project domain `"audio"` (`Job.domain`) with `schema_template = "support_call_audio"` (shared label schema with text support calls)
 - **ASR:** `faster-whisper` local default; `ASR_PROVIDER=openai` opt-in (Phase 2)
 - **Offsets:** `Segment.start_offset` / `end_offset` store **milliseconds** for audio; character offsets for documents
 - **Segments:** Merge/split Whisper utterances into ~15–45s windows before planning

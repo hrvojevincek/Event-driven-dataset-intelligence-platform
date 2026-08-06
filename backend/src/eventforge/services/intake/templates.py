@@ -61,7 +61,7 @@ def resolve_schema(
 
 
 def domain_for_template(schema_template: str | None) -> str:
-    """Map a schema template to the job domain used by preprocessing and export."""
+    """Map a schema template to the project domain used by preprocessing and export."""
     if schema_template == SUPPORT_CALL_AUDIO_TEMPLATE:
         return "audio"
     if schema_template == SUPPORT_CALL_TEMPLATE:
