@@ -8,6 +8,9 @@ Create Date: 2026-08-06 08:00:00.000000
 - assets.provenance Text -> JSONB (nullable)
 """
 
+from __future__ import annotations
+
+import json
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -20,7 +23,43 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def _repair_text_json_column(
+    connection: sa.Connection,
+    *,
+    table: str,
+    column: str,
+) -> None:
+    """Normalize Text values so a subsequent ``::jsonb`` cast cannot fail."""
+    connection.execute(
+        sa.text(
+            f"""
+            UPDATE {table}
+            SET {column} = NULL
+            WHERE {column} IS NOT NULL AND btrim({column}) = ''
+            """
+        )
+    )
+    rows = connection.execute(
+        sa.text(f"SELECT id, {column} AS raw_value FROM {table} WHERE {column} IS NOT NULL")
+    ).fetchall()
+    for row in rows:
+        raw_value = row.raw_value
+        if not isinstance(raw_value, str):
+            continue
+        try:
+            json.loads(raw_value)
+        except json.JSONDecodeError:
+            connection.execute(
+                sa.text(f"UPDATE {table} SET {column} = :payload WHERE id = :id"),
+                {"payload": json.dumps({"_legacy_text": raw_value}), "id": row.id},
+            )
+
+
 def upgrade() -> None:
+    connection = op.get_bind()
+    _repair_text_json_column(connection, table="segments", column="metadata_json")
+    _repair_text_json_column(connection, table="assets", column="provenance")
+
     op.alter_column(
         "segments",
         "metadata_json",
