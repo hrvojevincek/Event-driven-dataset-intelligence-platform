@@ -40,17 +40,19 @@ async def process_pipeline_failure(
     error_message: str = DEFAULT_DLQ_ERROR_MESSAGE,
     source_queue: str | None = None,
     receive_count: int | None = None,
+    claim_worker_name: str = WORKER_NAME_DLQ,
+    publish_source: str = EVENT_SOURCE_DLQ,
 ) -> PipelineFailedEvent | None:
     """Record terminal pipeline failure and emit pipeline.failed. Returns None if duplicate."""
     processed_repo = ProcessedEventRepository(session)
     failed_event_id = str(failed_event.event_id)
 
-    if not await processed_repo.try_claim(failed_event_id, WORKER_NAME_DLQ):
+    if not await processed_repo.try_claim(failed_event_id, claim_worker_name):
         return None
 
     stage = stage_for_failed_detail_type(failed_event.detail_type)
     if stage is None:
-        await processed_repo.release_claim(failed_event_id, WORKER_NAME_DLQ)
+        await processed_repo.release_claim(failed_event_id, claim_worker_name)
         msg = f"Unknown detail_type for pipeline failure: {failed_event.detail_type}"
         raise ValueError(msg)
 
@@ -62,13 +64,13 @@ async def process_pipeline_failure(
 
     job = await job_repo.get_by_id(failed_event.job_id)
     if job is None:
-        await processed_repo.release_claim(failed_event_id, WORKER_NAME_DLQ)
+        await processed_repo.release_claim(failed_event_id, claim_worker_name)
         msg = f"Job not found for pipeline failure: {failed_event.job_id}"
         raise ValueError(msg)
 
     job_stage = await stage_repo.get_by_job_and_stage(job.id, stage)
     if job_stage is None:
-        await processed_repo.release_claim(failed_event_id, WORKER_NAME_DLQ)
+        await processed_repo.release_claim(failed_event_id, claim_worker_name)
         msg = f"Stage {stage} missing for failed job: {job.id}"
         raise ValueError(msg)
 
@@ -88,9 +90,9 @@ async def process_pipeline_failure(
     await session.commit()
 
     try:
-        await publisher.publish(pipeline_failed, source=EVENT_SOURCE_DLQ)
+        await publisher.publish(pipeline_failed, source=publish_source)
     except EventPublishError:
-        await processed_repo.release_claim(failed_event_id, WORKER_NAME_DLQ)
+        await processed_repo.release_claim(failed_event_id, claim_worker_name)
         await session.commit()
         raise
 

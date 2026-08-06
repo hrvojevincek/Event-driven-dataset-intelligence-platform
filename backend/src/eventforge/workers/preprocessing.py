@@ -1,9 +1,13 @@
 import logging
-from typing import Any
+from typing import Any, ClassVar
 
 from eventforge.core.config import get_settings
 from eventforge.events.parser import parse_eventbridge_sqs_body
-from eventforge.events.schemas.constants import DETAIL_TYPE_INTAKE_COMPLETED
+from eventforge.events.publisher import EVENT_SOURCE_PREPROCESSING
+from eventforge.events.schemas.constants import (
+    DETAIL_TYPE_INTAKE_COMPLETED,
+    WORKER_NAME_PREPROCESSING,
+)
 from eventforge.stages.preprocessing import parse_intake_completed_event, run_preprocessing
 from eventforge.workers.bootstrap import main
 from eventforge.workers.stage_worker import StageWorker
@@ -14,11 +18,14 @@ logger = logging.getLogger(__name__)
 class PreprocessingWorker(StageWorker):
     """Consumes intake.completed events and runs the preprocessing agent."""
 
+    worker_name: ClassVar[str] = WORKER_NAME_PREPROCESSING
+    event_source: ClassVar[str] = EVENT_SOURCE_PREPROCESSING
+
     def __init__(self) -> None:
         settings = get_settings()
         super().__init__(settings.preprocessing_queue_name, settings)
 
-    async def handle_message(self, message: dict[str, Any]) -> None:
+    async def process_message(self, message: dict[str, Any]) -> None:
         detail = parse_eventbridge_sqs_body(message["Body"])
         detail_type = detail.get("detail_type")
 

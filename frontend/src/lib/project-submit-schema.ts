@@ -58,6 +58,7 @@ export const projectSubmitSchema = z
         ctx.addIssue({
           code: "custom",
           message: `Unsupported file type for this template: ${file.name}`,
+          path: ["files"],
         });
         return;
       }
@@ -65,6 +66,7 @@ export const projectSubmitSchema = z
         ctx.addIssue({
           code: "custom",
           message: `File is empty: ${file.name}`,
+          path: ["files"],
         });
         return;
       }
@@ -72,6 +74,7 @@ export const projectSubmitSchema = z
         ctx.addIssue({
           code: "custom",
           message: `File exceeds 50 MB: ${file.name}`,
+          path: ["files"],
         });
         return;
       }

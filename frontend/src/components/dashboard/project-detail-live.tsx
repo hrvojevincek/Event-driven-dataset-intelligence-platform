@@ -146,15 +146,15 @@ export function ProjectDetailLive({ projectId }: ProjectDetailLiveProps) {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <Card className="h-fit">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>Quality control</CardTitle>
             <CardDescription>
               Coverage, schema compliance, and confidence flags.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1">
             <QcPanel
               projectId={projectId}
               detail={detailQuery.data}
@@ -164,14 +164,14 @@ export function ProjectDetailLive({ projectId }: ProjectDetailLiveProps) {
           </CardContent>
         </Card>
 
-        <Card className="h-fit">
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>JSONL export</CardTitle>
             <CardDescription>
               Labeled dataset with provenance fields per line.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex min-h-0 flex-1 flex-col">
             <ExportPreview
               projectId={projectId}
               detail={detailQuery.data}

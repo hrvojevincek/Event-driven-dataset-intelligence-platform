@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
 from eventforge.core.config import Settings
+from eventforge.core.otel import agent_span
+
+_local_asr_lock = threading.Lock()
+_local_asr_cache: dict[tuple[str, str], FasterWhisperASR] = {}
 
 
 @dataclass(frozen=True)
@@ -46,28 +51,44 @@ class FasterWhisperASR:
             raise RuntimeError(msg) from exc
 
         self._model_size = model_size
-        self._model = WhisperModel(model_size, device=device, compute_type="int8")
+        self._device = device
+        with agent_span("asr", "load") as span:
+            span.set_attribute("asr.model_size", model_size)
+            span.set_attribute("asr.device", device)
+            span.set_attribute("asr.compute_type", "int8")
+            span.set_attribute("asr.cache_hit", False)
+            self._model = WhisperModel(model_size, device=device, compute_type="int8")
 
     @property
     def model_name(self) -> str:
         return f"faster-whisper/{self._model_size}"
 
     def transcribe(self, path: Path) -> list[Utterance]:
-        segments, _info = self._model.transcribe(str(path), vad_filter=True)
-        utterances: list[Utterance] = []
-        for segment in segments:
-            text = segment.text.strip()
-            if not text:
-                continue
-            utterances.append(
-                Utterance(
-                    text=text,
-                    start_ms=int(segment.start * 1000),
-                    end_ms=int(segment.end * 1000),
-                    confidence=getattr(segment, "avg_logprob", None),
-                )
+        with agent_span("asr", "transcribe") as span:
+            span.set_attribute("asr.model", self.model_name)
+            span.set_attribute("asr.beam_size", 1)
+            span.set_attribute("asr.vad_filter", True)
+            span.set_attribute("asr.path", path.name)
+            segments, _info = self._model.transcribe(
+                str(path),
+                vad_filter=True,
+                beam_size=1,
             )
-        return utterances
+            utterances: list[Utterance] = []
+            for segment in segments:
+                text = segment.text.strip()
+                if not text:
+                    continue
+                utterances.append(
+                    Utterance(
+                        text=text,
+                        start_ms=int(segment.start * 1000),
+                        end_ms=int(segment.end * 1000),
+                        confidence=getattr(segment, "avg_logprob", None),
+                    )
+                )
+            span.set_attribute("asr.utterance_count", len(utterances))
+            return utterances
 
 
 class OpenAIWhisperASR:
@@ -87,31 +108,57 @@ class OpenAIWhisperASR:
         return f"openai/{self._model}"
 
     def transcribe(self, path: Path) -> list[Utterance]:
-        with path.open("rb") as audio_file:
-            response = self._client.audio.transcriptions.create(
-                model=self._model,
-                file=audio_file,
-                response_format="verbose_json",
-                timestamp_granularities=["segment"],
-            )
-
-        utterances: list[Utterance] = []
-        for segment in response.segments or []:
-            text = segment.text.strip()
-            if not text:
-                continue
-            utterances.append(
-                Utterance(
-                    text=text,
-                    start_ms=int(segment.start * 1000),
-                    end_ms=int(segment.end * 1000),
+        with agent_span("asr", "transcribe") as span:
+            span.set_attribute("asr.model", self.model_name)
+            span.set_attribute("asr.path", path.name)
+            with path.open("rb") as audio_file:
+                response = self._client.audio.transcriptions.create(
+                    model=self._model,
+                    file=audio_file,
+                    response_format="verbose_json",
+                    timestamp_granularities=["segment"],
                 )
-            )
-        return utterances
+
+            utterances: list[Utterance] = []
+            for segment in response.segments or []:
+                text = segment.text.strip()
+                if not text:
+                    continue
+                utterances.append(
+                    Utterance(
+                        text=text,
+                        start_ms=int(segment.start * 1000),
+                        end_ms=int(segment.end * 1000),
+                    )
+                )
+            span.set_attribute("asr.utterance_count", len(utterances))
+            return utterances
 
 
 def get_asr_provider(settings: Settings) -> ASRProvider:
-    """Build the configured ASR provider."""
+    """Return the configured ASR provider (local Whisper is process-cached)."""
     if settings.asr_provider == "openai":
         return OpenAIWhisperASR(settings, model=settings.asr_openai_model)
-    return FasterWhisperASR(model_size=settings.asr_local_model, device=settings.asr_device)
+
+    cache_key = (settings.asr_local_model, settings.asr_device)
+    with _local_asr_lock:
+        cached = _local_asr_cache.get(cache_key)
+        if cached is not None:
+            with agent_span("asr", "load") as span:
+                span.set_attribute("asr.model_size", cache_key[0])
+                span.set_attribute("asr.device", cache_key[1])
+                span.set_attribute("asr.cache_hit", True)
+            return cached
+
+        provider = FasterWhisperASR(
+            model_size=settings.asr_local_model,
+            device=settings.asr_device,
+        )
+        _local_asr_cache[cache_key] = provider
+        return provider
+
+
+def reset_local_asr_cache() -> None:
+    """Clear the process-local faster-whisper cache (tests / worker restarts)."""
+    with _local_asr_lock:
+        _local_asr_cache.clear()

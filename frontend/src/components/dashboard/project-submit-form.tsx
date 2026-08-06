@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,97 +23,68 @@ import {
   buildProjectSubmitFormData,
   projectSubmitSchema,
   supportedFormatsLabel,
+  type ProjectSubmitInput,
 } from "@/lib/project-submit-schema";
 import {
   SCHEMA_TEMPLATES,
   type SchemaTemplateId,
 } from "@/lib/schema-templates";
 
-type FieldErrors = {
-  name?: string;
-  files?: string;
-  templateId?: string;
-  schemaOverride?: string;
-};
-
 export function ProjectSubmitForm() {
   const router = useRouter();
   const submit = useSubmitProject();
-  const [name, setName] = useState("");
-  const [templateId, setTemplateId] =
-    useState<SchemaTemplateId>("support_call");
-  const [schemaOverride, setSchemaOverride] = useState("");
-  const [files, setFiles] = useState<FileList | null>(null);
-  const [showJsonEditor, setShowJsonEditor] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const {
+    control,
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(projectSubmitSchema),
+    defaultValues: {
+      name: "",
+      templateId: "support_call" as SchemaTemplateId,
+      schemaOverride: "",
+      showJsonEditor: false,
+    },
+  });
+
+  const [name, templateId, showJsonEditor, files] = useWatch({
+    control,
+    name: ["name", "templateId", "showJsonEditor", "files"],
+  });
 
   const selectedTemplate = SCHEMA_TEMPLATES.find((t) => t.id === templateId);
   const fileAccept = acceptAttributeForTemplate(templateId);
   const supportedFormats = supportedFormatsLabel(templateId);
 
-  function clearFieldError(field: keyof FieldErrors) {
-    setFieldErrors((current) => {
-      if (!current[field]) {
-        return current;
-      }
-      const next = { ...current };
-      delete next[field];
-      return next;
-    });
-  }
-
   function handleTemplateChange(id: SchemaTemplateId) {
-    setTemplateId(id);
-    clearFieldError("templateId");
+    setValue("templateId", id, { shouldValidate: errors.templateId != null });
     if (showJsonEditor) {
       const template = SCHEMA_TEMPLATES.find((t) => t.id === id);
       if (template) {
-        setSchemaOverride(JSON.stringify(template.schema, null, 2));
+        setValue("schemaOverride", JSON.stringify(template.schema, null, 2));
       }
     }
   }
 
   function handleToggleJsonEditor() {
-    if (!showJsonEditor && selectedTemplate) {
-      setSchemaOverride(JSON.stringify(selectedTemplate.schema, null, 2));
+    const next = !showJsonEditor;
+    if (next && selectedTemplate) {
+      setValue(
+        "schemaOverride",
+        JSON.stringify(selectedTemplate.schema, null, 2),
+      );
     }
-    setShowJsonEditor((value) => !value);
-    clearFieldError("schemaOverride");
+    setValue("showJsonEditor", next, {
+      shouldValidate: errors.schemaOverride != null,
+    });
   }
 
-  async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFieldErrors({});
-
-    const parsed = projectSubmitSchema.safeParse({
-      name,
-      templateId,
-      files,
-      schemaOverride,
-      showJsonEditor,
-    });
-
-    if (!parsed.success) {
-      const errors: FieldErrors = {};
-      for (const issue of parsed.error.issues) {
-        const field = issue.path[0];
-        if (
-          field === "name" ||
-          field === "files" ||
-          field === "templateId" ||
-          field === "schemaOverride"
-        ) {
-          errors[field] = issue.message;
-        }
-      }
-      setFieldErrors(errors);
-      return;
-    }
-
+  async function onSubmit(data: ProjectSubmitInput) {
     try {
-      const result = await submit.mutateAsync(
-        buildProjectSubmitFormData(parsed.data),
-      );
+      const result = await submit.mutateAsync(buildProjectSubmitFormData(data));
       router.push(`/projects/${result.job_id}`);
     } catch {
       // Error surfaced via submit.error below
@@ -127,10 +99,10 @@ export function ProjectSubmitForm() {
         : null;
 
   const canSubmit =
-    name.trim().length > 0 && files !== null && files.length > 0;
+    (name ?? "").trim().length > 0 && files != null && files.length > 0;
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <Card>
         <CardHeader>
           <CardTitle>Project setup</CardTitle>
@@ -144,36 +116,35 @@ export function ProjectSubmitForm() {
             <Label htmlFor="name">Project name</Label>
             <Input
               id="name"
-              name="name"
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-                clearFieldError("name");
-              }}
               placeholder="e.g. Support calls batch 1"
-              aria-invalid={fieldErrors.name ? true : undefined}
+              aria-invalid={errors.name ? true : undefined}
+              {...register("name")}
             />
-            {fieldErrors.name ? (
-              <p className="text-xs text-destructive">{fieldErrors.name}</p>
+            {errors.name ? (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
             ) : null}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="files">Files</Label>
-            <Input
-              id="files"
+            <Controller
+              control={control}
               name="files"
-              type="file"
-              multiple
-              accept={fileAccept}
-              onChange={(event) => {
-                setFiles(event.target.files);
-                clearFieldError("files");
-              }}
-              aria-invalid={fieldErrors.files ? true : undefined}
+              render={({ field: { onChange, name: fieldName, ref } }) => (
+                <Input
+                  id="files"
+                  name={fieldName}
+                  ref={ref}
+                  type="file"
+                  multiple
+                  accept={fileAccept}
+                  onChange={(event) => onChange(event.target.files)}
+                  aria-invalid={errors.files ? true : undefined}
+                />
+              )}
             />
-            {fieldErrors.files ? (
-              <p className="text-xs text-destructive">{fieldErrors.files}</p>
+            {errors.files ? (
+              <p className="text-xs text-destructive">{errors.files.message}</p>
             ) : files && files.length > 0 ? (
               <p className="text-xs text-muted-foreground">
                 {files.length} file{files.length === 1 ? "" : "s"} selected
@@ -206,8 +177,10 @@ export function ProjectSubmitForm() {
                 </label>
               ))}
             </div>
-            {fieldErrors.templateId ? (
-              <p className="text-xs text-destructive">{fieldErrors.templateId}</p>
+            {errors.templateId ? (
+              <p className="text-xs text-destructive">
+                {errors.templateId.message}
+              </p>
             ) : null}
           </fieldset>
 
@@ -225,17 +198,18 @@ export function ProjectSubmitForm() {
               </Button>
             </div>
             {showJsonEditor ? (
-              <textarea
-                id="schema_json"
-                name="schema_json"
-                rows={8}
-                value={schemaOverride}
-                onChange={(event) => {
-                  setSchemaOverride(event.target.value);
-                  clearFieldError("schemaOverride");
-                }}
-                className="w-full rounded-lg border border-border bg-muted/20 p-3 font-mono text-xs aria-invalid:border-destructive"
-                aria-invalid={fieldErrors.schemaOverride ? true : undefined}
+              <Controller
+                control={control}
+                name="schemaOverride"
+                render={({ field }) => (
+                  <textarea
+                    id="schema_json"
+                    rows={8}
+                    className="w-full rounded-lg border border-border bg-muted/20 p-3 font-mono text-xs aria-invalid:border-destructive"
+                    aria-invalid={errors.schemaOverride ? true : undefined}
+                    {...field}
+                  />
+                )}
               />
             ) : (
               <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
@@ -243,9 +217,9 @@ export function ProjectSubmitForm() {
                 customize.
               </p>
             )}
-            {fieldErrors.schemaOverride ? (
+            {errors.schemaOverride ? (
               <p className="text-xs text-destructive">
-                {fieldErrors.schemaOverride}
+                {errors.schemaOverride.message}
               </p>
             ) : null}
           </div>

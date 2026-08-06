@@ -105,6 +105,41 @@ Consolidated SQS + EventBridge + Step Functions into `infra/terraform/environmen
 
 ---
 
+## 2026-08 — WAV preprocessing slow: Whisper model reloaded every job
+
+**Area:** Backend · ASR · OpenTelemetry / Jaeger  
+**Symptom:** Local WAV pipeline spent ~7–10s in preprocessing for a ~4s clip; Jaeger showed one opaque `agent.preprocessing.process` span with no breakdown.
+
+### Situation
+
+Audio pivot (`support_call_audio` + faster-whisper) worked end-to-end, but demo latency felt poor. Suspect was “ASR is slow,” but we could not tell load vs transcribe vs windowing.
+
+### Task
+
+Make local WAV preprocessing faster across consecutive jobs and make Jaeger show where time goes.
+
+### Action
+
+1. Confirmed `get_asr_provider()` constructed a new `WhisperModel` on every preprocessing run (no process cache).
+2. Added a process-level singleton cache keyed by `(model_size, device)` in `services/preprocessing/asr.py`.
+3. Added child spans: `agent.asr.load` (with `asr.cache_hit`), `agent.asr.transcribe` (`beam_size=1`), `agent.asr.window_merge`.
+4. Measured two back-to-back jobs in Jaeger (same worker process, no restart).
+
+### Result
+
+| Run                 | `asr.cache_hit` | `asr.load` | `asr.transcribe` | Preprocessing total |
+| ------------------- | --------------- | ---------- | ---------------- | ------------------- |
+| Cold (worker start) | `false`         | ~1.85s     | ~7.0s            | **~10.5s**          |
+| Warm (next job)     | `true`          | ~0ms       | ~5.6s            | **~6.6s**           |
+
+Singleton removed ~1.8s of repeated model init. Remaining cost is real CPU transcription (`small` on CPU); further options are `ASR_LOCAL_MODEL=base` or `ASR_PROVIDER=openai`.
+
+**Lesson:** Heavy ML clients (Whisper, etc.) must be process-singletons in long-lived workers. Add child spans before optimizing — otherwise you tune the wrong slice.
+
+**Files:** `backend/src/eventforge/services/preprocessing/asr.py`, `audio.py`, `stages/preprocessing.py`, `tests/test_asr_provider_cache.py`
+
+---
+
 ## Template
 
 ```markdown
