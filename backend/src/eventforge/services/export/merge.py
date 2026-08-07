@@ -21,6 +21,7 @@ class ExportRecord:
     audio_uri: str | None = None
     start_ms: int | None = None
     end_ms: int | None = None
+    speaker: str | None = None
 
 
 @dataclass(frozen=True)
@@ -119,6 +120,8 @@ def _record_to_line(record: ExportRecord) -> str:
         payload["start_ms"] = record.start_ms
     if record.end_ms is not None:
         payload["end_ms"] = record.end_ms
+    if record.speaker is not None:
+        payload["speaker"] = record.speaker
     return json.dumps(payload, ensure_ascii=False)
 
 
@@ -171,6 +174,11 @@ def merge_batches_to_jsonl(
             continue
         labels, confidence = label_entry
         asset = assets_by_id.get(segment.asset_id)
+        speaker = None
+        if is_audio_project and segment.metadata_json:
+            raw_speaker = segment.metadata_json.get("speaker")
+            if raw_speaker in ("agent", "customer"):
+                speaker = raw_speaker
         provenance = {
             "asset_filename": asset.filename if asset is not None else "unknown",
             "project_id": str(project.id),
@@ -187,6 +195,7 @@ def merge_batches_to_jsonl(
                 audio_uri=asset.storage_uri if is_audio_project and asset is not None else None,
                 start_ms=segment.start_offset if is_audio_project else None,
                 end_ms=segment.end_offset if is_audio_project else None,
+                speaker=speaker,
             )
         )
 

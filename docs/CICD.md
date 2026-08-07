@@ -10,7 +10,7 @@ GitHub Actions runs lint and tests on every PR and push to `main`.
 | -------- | ------- | ------- |
 | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | PR + push `main` | Ruff, ESLint, pytest (`-m "not integration"`) |
 
-No deploy workflow runs on merge. Terraform and ECS modules remain in `infra/terraform/` for reference only.
+No deploy workflow runs on merge. Terraform and ECS modules remain in `infra/terraform/` for reference only. See [`docs/AWS_ARCHITECTURE.md`](./AWS_ARCHITECTURE.md) for the full archived AWS topology.
 
 ---
 

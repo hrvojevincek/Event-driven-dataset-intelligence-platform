@@ -24,6 +24,7 @@ from eventforge.db.models import (
 from eventforge.events.publisher import EventPublisher
 from eventforge.events.schemas import build_intake_completed_event
 from eventforge.services.preprocessing.asr import Utterance
+from eventforge.services.preprocessing.audio_segments import SpeakerRole
 from eventforge.services.storage.local import LocalStorage
 from eventforge.stages.preprocessing import run_preprocessing
 
@@ -37,6 +38,24 @@ class MockASR:
 
     def transcribe(self, path: Path) -> list[Utterance]:
         return self.utterances
+
+
+class MockSpeakerRoleClassifier:
+    """Deterministic speaker-role stub for preprocessing tests."""
+
+    def __init__(self, roles: list[SpeakerRole]) -> None:
+        self._roles = roles
+
+    async def classify(
+        self,
+        utterances: list[Utterance],
+        *,
+        job_id: uuid.UUID,
+    ) -> list[SpeakerRole]:
+        if len(self._roles) != len(utterances):
+            msg = "mock role count must match utterance count"
+            raise ValueError(msg)
+        return self._roles
 
 
 @pytest.fixture
@@ -97,7 +116,7 @@ async def _seed_audio_project(
     return job, [asset]
 
 
-async def test_run_preprocessing_audio_writes_ms_segments(
+async def test_run_preprocessing_audio_writes_speaker_turn_segments(
     db_session: AsyncSession,
     local_storage: LocalStorage,
 ) -> None:
@@ -109,6 +128,7 @@ async def test_run_preprocessing_audio_writes_ms_segments(
             Utterance("Agent offered a refund.", 8_000, 16_000, -0.15),
         ]
     )
+    mock_roles = MockSpeakerRoleClassifier(["customer", "agent"])
 
     inbound = build_intake_completed_event(
         job_id=job.id,
@@ -122,24 +142,28 @@ async def test_run_preprocessing_audio_writes_ms_segments(
         inbound,
         storage=local_storage,
         asr=mock_asr,
+        role_classifier=mock_roles,
     )
 
     assert result is not None
-    assert result.payload.segment_count == 1
+    assert result.payload.segment_count == 2
 
     result = await db_session.execute(
         select(Segment).where(Segment.job_id == job.id).order_by(Segment.segment_index)
     )
     rows = result.scalars().all()
-    assert len(rows) == 1
-    segment = rows[0]
-    assert segment.start_offset == 0
-    assert segment.end_offset == 16_000
-    assert "duplicate charge" in segment.content
-    assert segment.metadata_json is not None
-    assert segment.metadata_json["kind"] == "audio_utterance"
-    assert segment.metadata_json["asr_model"] == "mock/test"
-    assert segment.metadata_json["asr_avg_logprob"] == -0.18
+    assert len(rows) == 2
+    assert rows[0].metadata_json is not None
+    assert rows[0].metadata_json["kind"] == "audio_turn"
+    assert rows[0].metadata_json["speaker"] == "customer"
+    assert rows[0].start_offset == 0
+    assert rows[0].end_offset == 8_000
+    assert "duplicate charge" in rows[0].content
+    assert rows[1].metadata_json["speaker"] == "agent"
+    assert rows[1].start_offset == 8_000
+    assert rows[1].end_offset == 16_000
+    assert rows[1].metadata_json["asr_model"] == "mock/test"
+    assert rows[1].metadata_json["asr_avg_logprob"] == -0.15
 
 
 async def test_run_preprocessing_audio_fails_on_empty_transcript(
@@ -163,4 +187,5 @@ async def test_run_preprocessing_audio_fails_on_empty_transcript(
             inbound,
             storage=local_storage,
             asr=mock_asr,
+            role_classifier=MockSpeakerRoleClassifier([]),
         )

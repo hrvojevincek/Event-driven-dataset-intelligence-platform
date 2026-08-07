@@ -6,6 +6,7 @@ import pytest
 from eventforge.db.models import Job, Segment
 from eventforge.services.intake.templates import (
     DOCUMENT_CLASSIFICATION_TEMPLATE,
+    SUPPORT_CALL_AUDIO_TEMPLATE,
     SUPPORT_CALL_TEMPLATE,
 )
 from eventforge.services.planning.schema_templates import (
@@ -48,6 +49,7 @@ def test_load_label_schema_parses_project_schema() -> None:
 
 def test_segments_per_task_defaults_by_template() -> None:
     assert segments_per_task_for_template(SUPPORT_CALL_TEMPLATE) == 1
+    assert segments_per_task_for_template(SUPPORT_CALL_AUDIO_TEMPLATE) == 5
     assert segments_per_task_for_template(DOCUMENT_CLASSIFICATION_TEMPLATE) == 5
 
 
@@ -86,6 +88,43 @@ def test_build_annotation_tasks_batches_support_call_segments_one_per_task() -> 
     assert len(planned[0].segment_ids) == 1
     assert "support-call segment" in planned[0].instructions
     assert planned[0].segment_ids[0] == segments[0].id
+
+
+def test_build_annotation_tasks_batches_audio_support_call_segments() -> None:
+    project = Job(
+        user_id=uuid.uuid4(),
+        correlation_id="corr-audio-planning",
+        name="Audio support batch",
+        schema_template=SUPPORT_CALL_AUDIO_TEMPLATE,
+        schema_json={
+            "type": "object",
+            "properties": {
+                "emotion": {"type": "string"},
+                "intent": {"type": "string"},
+                "topic": {"type": "string"},
+                "resolution_status": {"type": "string"},
+            },
+            "required": ["emotion", "intent", "topic", "resolution_status"],
+        },
+    )
+    asset_id = uuid.uuid4()
+    segments = [
+        Segment(
+            job_id=project.id,
+            asset_id=asset_id,
+            segment_index=index,
+            content=f"Turn {index}",
+        )
+        for index in range(7)
+    ]
+
+    planned = build_annotation_tasks(project, segments)
+
+    assert len(planned) == 2
+    assert len(planned[0].segment_ids) == 5
+    assert len(planned[1].segment_ids) == 2
+    assert planned[0].segment_ids == [segment.id for segment in segments[:5]]
+    assert planned[1].segment_ids == [segment.id for segment in segments[5:]]
 
 
 def test_build_annotation_tasks_batches_document_segments() -> None:

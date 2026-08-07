@@ -26,9 +26,14 @@ from eventforge.events.schemas import (
     PreprocessingCompletedEvent,
     build_preprocessing_completed_event,
 )
+from eventforge.services.llm.client import get_llm_client
 from eventforge.services.preprocessing import read_asset_text, segment_text, source_kind_for_asset
 from eventforge.services.preprocessing.asr import ASRProvider, get_asr_provider
 from eventforge.services.preprocessing.audio import is_audio_asset, transcribe_asset_to_segments
+from eventforge.services.preprocessing.speaker_roles import (
+    LLMSpeakerRoleClassifier,
+    SpeakerRoleClassifier,
+)
 from eventforge.services.storage.local import LocalStorage, get_local_storage
 from eventforge.stages._runtime import StageRun, parse_event
 
@@ -43,6 +48,7 @@ async def _load_or_create_segments(
     chunk_size: int,
     overlap: int,
     asr: ASRProvider | None = None,
+    role_classifier: SpeakerRoleClassifier | None = None,
 ) -> list[Segment]:
     segment_repo = SegmentRepository(session)
     existing = await segment_repo.list_by_job_id(job_id)
@@ -54,17 +60,25 @@ async def _load_or_create_segments(
     if asr_provider is None and any(is_audio_asset(asset) for asset in assets):
         asr_provider = get_asr_provider(settings)
 
+    speaker_classifier = role_classifier
+    if speaker_classifier is None and any(is_audio_asset(asset) for asset in assets):
+        speaker_classifier = LLMSpeakerRoleClassifier(get_llm_client(session))
+
     for asset in assets:
         if is_audio_asset(asset):
             if asr_provider is None:
                 msg = "ASR provider required for audio assets"
                 raise RuntimeError(msg)
-            pieces = transcribe_asset_to_segments(
+            if speaker_classifier is None:
+                msg = "Speaker role classifier required for audio assets"
+                raise RuntimeError(msg)
+            pieces = await transcribe_asset_to_segments(
                 asset,
                 storage,
                 asr_provider,
-                min_window_ms=settings.asr_min_window_ms,
-                max_window_ms=settings.asr_max_window_ms,
+                speaker_classifier,
+                job_id=job_id,
+                max_turn_ms=settings.asr_max_turn_ms,
             )
             for piece in pieces:
                 segments.append(
@@ -116,6 +130,7 @@ async def run_preprocessing(
     *,
     storage: LocalStorage | None = None,
     asr: ASRProvider | None = None,
+    role_classifier: SpeakerRoleClassifier | None = None,
 ) -> PreprocessingCompletedEvent | None:
     """Run preprocessing for one intake.completed event. Returns None if already processed."""
     run = await StageRun.begin(
@@ -146,6 +161,7 @@ async def run_preprocessing(
         chunk_size=settings.preprocessing_segment_size_tokens,
         overlap=settings.preprocessing_segment_overlap_tokens,
         asr=asr,
+        role_classifier=role_classifier,
     )
 
     completed_event = build_preprocessing_completed_event(

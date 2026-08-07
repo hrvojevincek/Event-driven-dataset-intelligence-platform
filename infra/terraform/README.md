@@ -1,6 +1,7 @@
 # Terraform Infrastructure
 
 > **ADR:** [ADR-012](../../docs/TECH_DECISIONS.md#adr-012-all-in-aws-deployment-on-ecs-fargate) — all-in-AWS ECS Fargate deployment.  
+> **Architecture doc:** [`docs/AWS_ARCHITECTURE.md`](../../docs/AWS_ARCHITECTURE.md) — Mermaid diagrams and portfolio walkthrough (archived, not maintained).  
 > **Cursor agents:** Infra conventions in `.cursor/rules/infra-aws.mdc`.
 
 IaC for AWS resources. Default region: **`eu-west-2` (London)**.

@@ -291,7 +291,8 @@ def test_merge_batches_to_jsonl_includes_audio_fields_for_audio_project(
             start_offset=0,
             end_offset=16_000,
             metadata_json={
-                "kind": "audio_utterance",
+                "kind": "audio_turn",
+                "speaker": "customer",
                 "asr_model": "mock/test",
                 "asr_avg_logprob": -0.12,
             },
@@ -321,6 +322,7 @@ def test_merge_batches_to_jsonl_includes_audio_fields_for_audio_project(
     assert record["audio_uri"] == "uploads/project/call_001.wav"
     assert record["start_ms"] == 0
     assert record["end_ms"] == 16_000
+    assert record["speaker"] == "customer"
     assert record["content"] == "Customer asked about billing."
     assert record["provenance"]["asr_model"] == "mock/test"
     assert record["provenance"]["asr_avg_logprob"] == -0.12

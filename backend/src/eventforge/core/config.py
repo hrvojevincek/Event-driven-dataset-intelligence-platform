@@ -49,8 +49,7 @@ class Settings(BaseSettings):
     asr_local_model: str = "small"
     asr_openai_model: str = "whisper-1"
     asr_device: str = "cpu"
-    asr_min_window_ms: int = 15_000
-    asr_max_window_ms: int = 45_000
+    asr_max_turn_ms: int = 60_000
     preprocessing_queue_visibility_seconds: int = 900
     planning_segments_per_task: int | None = None
     llm_max_retries: int = 3
@@ -122,6 +121,14 @@ class Settings(BaseSettings):
     def _positive_planning_batch(cls, value: int | None) -> int | None:
         if value is not None and value < 1:
             msg = "must be >= 1 when set"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("asr_max_turn_ms")
+    @classmethod
+    def _positive_asr_turn_duration(cls, value: int) -> int:
+        if value <= 0:
+            msg = "must be > 0"
             raise ValueError(msg)
         return value
 
