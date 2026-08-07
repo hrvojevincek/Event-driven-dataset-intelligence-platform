@@ -26,7 +26,7 @@ from eventforge.events.schemas import (
     PreprocessingCompletedEvent,
     build_preprocessing_completed_event,
 )
-from eventforge.services.llm.client import LLMClient, get_llm_client
+from eventforge.services.llm.client import get_llm_client
 from eventforge.services.preprocessing import read_asset_text, segment_text, source_kind_for_asset
 from eventforge.services.preprocessing.asr import ASRProvider, get_asr_provider
 from eventforge.services.preprocessing.audio import is_audio_asset, transcribe_asset_to_segments
