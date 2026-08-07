@@ -49,8 +49,7 @@ class Settings(BaseSettings):
     asr_local_model: str = "small"
     asr_openai_model: str = "whisper-1"
     asr_device: str = "cpu"
-    asr_min_window_ms: int = 15_000
-    asr_max_window_ms: int = 45_000
+    asr_max_turn_ms: int = 60_000
     preprocessing_queue_visibility_seconds: int = 900
     planning_segments_per_task: int | None = None
     llm_max_retries: int = 3

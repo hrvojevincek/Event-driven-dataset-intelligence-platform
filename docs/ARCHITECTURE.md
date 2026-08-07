@@ -1,247 +1,205 @@
 # EventForge — System Architecture
 
-> **Pivot notice (2026-08):** This document still describes the **legacy research/RAG pipeline** (queries, ingestion, pgvector, synthesis). **Do not use for new work.**
->
-> **Current product (dataset intelligence platform):** read [`DATASET_PLATFORM.md`](./DATASET_PLATFORM.md) first, then [`PIVOT_PLAN.md`](./PIVOT_PLAN.md) for phase status. Phase 10 will rewrite this file to match the intake → preprocessing → planning → annotation → export flow.
+> **Dataset intelligence platform (current).** Product vision: [`DATASET_PLATFORM.md`](./DATASET_PLATFORM.md) · phase checklist: [`PIVOT_PLAN.md`](./PIVOT_PLAN.md).  
+> **Infra scope:** LocalStack + long-poll workers locally (ADR-015). AWS ECS deploy is archived.
 
-> **Cursor agents:** Summary in `.cursor/rules/eventforge-core.mdc` + `.cursor/rules/event-pipeline.mdc`. This doc has full Mermaid diagrams for the **legacy** architecture below.
-
-**Version:** 0.1  
-**Last updated:** 2025-06-20
+**Version:** 0.2 (dataset pivot)  
+**Last updated:** 2026-08-06
 
 ---
 
 ## 1. High-Level Overview
 
-EventForge is a **hybrid architecture**: a Next.js frontend for UX and real-time visualization, a FastAPI backend for API and agent logic, and AWS managed services for event orchestration and persistence.
+EventForge is a **hybrid architecture**: Next.js for upload + live pipeline UI, FastAPI for the HTTP API, and **event-driven stage workers** (SQS consumers) for pipeline processing. Agents communicate via EventBridge events only — no agent-to-agent HTTP.
 
 ```mermaid
 flowchart TB
     subgraph Client
         UI[Next.js Dashboard]
-        RF[React Flow Viz]
+        RF[React Flow]
     end
 
-    subgraph API["FastAPI (ECS/Lambda)"]
-        REST[REST API]
-        SSE[SSE Stream]
+    subgraph API["FastAPI"]
+        REST[REST /api/v1/projects]
+        SSE[SSE /projects/id/stream]
         PUB[Event Publisher]
     end
 
-    subgraph AWS["AWS Event Layer"]
-        EB[EventBridge Bus]
-        SF[Step Functions]
-        SQS1[SQS: ingestion]
-        SQS2[SQS: embedding]
-        SQS3[SQS: knowledge]
-        SQS4[SQS: research]
-        SQS5[SQS: synthesis]
-        DLQ[SQS: DLQ]
+    subgraph Events["EventBridge + SQS (LocalStack locally)"]
+        EB[eventforge-bus]
+        Q1[eventforge-intake]
+        Q2[eventforge-preprocessing]
+        Q3[eventforge-planning]
+        Q4[eventforge-annotation]
+        Q5[eventforge-export]
+        DLQ[eventforge-dlq]
     end
 
-    subgraph Workers["Agent Workers (ECS Fargate)"]
-        W1[Ingestion]
-        W2[Embedding]
-        W3[Knowledge Mining]
-        W4[Research x N]
-        W5[Synthesis]
+    subgraph Workers["Stage workers (Procfile / make workers)"]
+        W1[IntakeWorker]
+        W2[PreprocessingWorker]
+        W3[PlanningWorker]
+        W4[AnnotationWorker]
+        W5[ExportWorker]
+        W6[DlqWorker]
     end
 
     subgraph Data
-        PG[(Postgres + pgvector)]
-        S3[(S3 Artifacts)]
+        PG[(Postgres 16)]
+        DISK[S3 or (Local uploads ./data/uploads/)]
     end
 
     subgraph Obs["Observability"]
-        OTEL[OTEL Collector]
-        LOGS[CloudWatch / Grafana]
+        OTEL[OTEL → Jaeger]
     end
 
     UI --> REST
     UI --> SSE
-    RF --> SSE
     REST --> PG
+    REST --> DISK
     REST --> PUB
     PUB --> EB
 
-    EB --> SQS1 --> W1
-    W1 --> EB
-    EB --> SQS2 --> W2
-    W2 --> PG
-    W2 --> EB
-    EB --> SQS3 --> W3
-    W3 --> PG
-    W3 --> EB
-    EB --> SF
-    SF --> SQS4 --> W4
-    W4 --> EB
-    EB --> SQS5 --> W5
-    W5 --> PG
-    W5 --> SSE
+    EB --> Q1 --> W1 --> EB
+    EB --> Q2 --> W2 --> EB
+    EB --> Q3 --> W3 --> EB
+    EB --> Q4 --> W4 --> EB
+    EB --> Q5 --> W5 --> EB
 
+    W1 & W2 & W3 & W4 & W5 --> PG
     W1 & W2 & W3 & W4 & W5 --> OTEL
     REST --> OTEL
-    OTEL --> LOGS
 
-    SQS1 & SQS2 & SQS3 & SQS4 & SQS5 -.->|failed| DLQ
+    Q1 & Q2 & Q3 & Q4 & Q5 -.->|maxReceiveCount| DLQ
+    DLQ --> W6
+    W6 --> EB
+    SSE --> UI
 ```
 
 ---
 
-## 2. Component Breakdown
+## 2. Pipeline event flow
 
-### 2.1 Frontend (Next.js 15)
+```
+eventforge.project.submitted
+  → eventforge.intake.completed
+  → eventforge.preprocessing.completed
+  → eventforge.planning.completed
+  → eventforge.annotation.task.dispatched (×N)
+  → eventforge.annotation.task.completed (×N)
+  → eventforge.annotation.all_completed
+  → eventforge.export.completed
+```
 
-| Component               | Responsibility                           |
-| ----------------------- | ---------------------------------------- |
-| `app/` routes           | Query form, job detail, history          |
-| `components/workflow/`  | React Flow pipeline visualization        |
-| `components/dashboard/` | Synthesis viewer, sources, cost panel    |
-| `hooks/useJobStream`    | SSE subscription for live updates        |
-| `lib/api-client`        | Typed fetch from OpenAPI-generated types |
-
-**Realtime strategy:** Server-Sent Events from FastAPI. Each pipeline event updates React Flow node state and a timeline log.
-
-### 2.2 Backend API (FastAPI)
-
-| Module               | Responsibility                         |
-| -------------------- | -------------------------------------- |
-| `api/routes/queries` | CRUD for research jobs                 |
-| `api/routes/stream`  | SSE endpoint keyed by `correlation_id` |
-| `events/publisher`   | PutEvents to EventBridge               |
-| `db/models`          | Job, Stage, Source, LLMUsage, User     |
-| `core/otel`          | Tracer provider, span helpers          |
-| `services/cost`      | Token → USD calculation                |
-
-Runs as a stateless API service. No long-running agent work in request handlers.
-
-### 2.3 Agent Workers
-
-Each worker is a **long-polling SQS consumer** (or Lambda for lighter stages in future). Workers:
-
-1. Receive message with `event_id`, `correlation_id`, `job_id`, `payload`
-2. Check idempotency (processed events table)
-3. Execute agent logic with OTEL span
-4. Persist results to Postgres (including pgvector embeddings)
-5. Publish next-stage event to EventBridge
-6. Delete SQS message on success; leave for retry on failure
-
-| Worker    | Input Event                | Output Event              | External Deps                   |
-| --------- | -------------------------- | ------------------------- | ------------------------------- |
-| Ingestion | `query.submitted`          | `ingestion.completed`     | Tavily API                      |
-| Embedding | `ingestion.completed`      | `embedding.completed`     | OpenAI embeddings, pgvector     |
-| Knowledge | `embedding.completed`      | `knowledge.mined`         | pgvector similarity search, LLM |
-| Research  | `research.task.dispatched` | `research.task.completed` | LLM, web search                 |
-| Synthesis | all research done          | `synthesis.completed`     | LLM                             |
-
-### 2.4 Orchestration
-
-**EventBridge** is the central nervous system. Rules route events to SQS queues by `detail-type`.
-
-**Step Functions** handles the **research fan-out**:
-
-1. Knowledge mining completes → Step Function triggered
-2. SF generates N research sub-tasks (Map state)
-3. Each sub-task message → `eventforge-research` SQS
-4. SF waits for all completions (callback or polling pattern)
-5. On all complete → emit event to synthesis queue
-
-### 2.5 Data Stores
-
-| Store                   | Data                                                                                    |
-| ----------------------- | --------------------------------------------------------------------------------------- |
-| **Postgres + pgvector** | Users, jobs, stages, sources, llm_usage, processed_events, document chunks + embeddings |
-| **S3**                  | Raw fetched documents, final synthesis artifacts (optional)                             |
+On terminal failure: `eventforge.pipeline.failed` (from stage worker or DLQ handler).
 
 ---
 
-## 3. Event Flow (Detailed)
+## 3. Stage workers
+
+All pipeline workers live under `backend/src/eventforge/workers/`. Start locally via **`make workers`** (Honcho reads [`Procfile`](../Procfile)) or run modules individually, e.g. `python -m eventforge.workers.intake`.
+
+### 3.1 Worker inventory
+
+| Worker                  | Module                     | SQS queue                  | Consumes (`detail_type`)                                                           | Stage handler                            | Publishes                                                                             |
+| ----------------------- | -------------------------- | -------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------- |
+| **IntakeWorker**        | `workers/intake.py`        | `eventforge-intake`        | `eventforge.project.submitted`                                                     | `stages/intake.run_intake`               | `intake.completed`                                                                    |
+| **PreprocessingWorker** | `workers/preprocessing.py` | `eventforge-preprocessing` | `eventforge.intake.completed`                                                      | `stages/preprocessing.run_preprocessing` | `preprocessing.completed`                                                             |
+| **PlanningWorker**      | `workers/planning.py`      | `eventforge-planning`      | `eventforge.preprocessing.completed`                                               | `stages/planning.run_planning`           | `planning.completed`                                                                  |
+| **AnnotationWorker**    | `workers/annotation.py`    | `eventforge-annotation`    | `planning.completed` (sequential fan-out) **or** `annotation.task.dispatched` (×N) | `stages/annotation`                      | `annotation.task.dispatched`, `annotation.task.completed`, `annotation.all_completed` |
+| **ExportWorker**        | `workers/export.py`        | `eventforge-export`        | `eventforge.annotation.all_completed` (ignores `annotation.task.completed`)        | `stages/export.run_export`               | `export.completed`                                                                    |
+| **DlqWorker**           | `workers/dlq.py`           | `eventforge-dlq`           | Any poison message after retries                                                   | `services/pipeline_failure`              | `pipeline.failed`                                                                     |
+
+Queue names use prefix from config (`SQS_QUEUE_PREFIX`, default `eventforge`). See `core/config.py` properties `*_queue_name`.
+
+### 3.2 Shared worker runtime
 
 ```mermaid
-sequenceDiagram
-    participant U as User
-    participant API as FastAPI
-    participant EB as EventBridge
-    participant I as Ingestion Worker
-    participant E as Embedding Worker
-    participant K as Knowledge Worker
-    participant SF as Step Functions
-    participant R as Research Workers
-    participant S as Synthesis Worker
-    participant UI as Dashboard (SSE)
+classDiagram
+    class SqsConsumer {
+        +handle_message()
+        long-poll SQS
+    }
+    class StageWorker {
+        +process_message()
+        +_record_terminal_failure()
+        DB session factory
+        EventPublisher
+    }
+    class IntakeWorker
+    class PreprocessingWorker
+    class PlanningWorker
+    class AnnotationWorker
+    class ExportWorker
+    class DlqWorker
 
-    U->>API: POST /queries
-    API->>API: Create job (status: pending)
-    API->>EB: query.submitted
-    API-->>U: job_id
-
-    EB->>I: via SQS
-    I->>I: Fetch sources
-    I->>EB: ingestion.completed
-    I-->>UI: stage update via SSE
-
-    EB->>E: via SQS
-    E->>E: Chunk + embed → Postgres (pgvector)
-    E->>EB: embedding.completed
-
-    EB->>K: via SQS
-    K->>K: Mine knowledge
-    K->>EB: knowledge.mined
-
-    EB->>SF: trigger fan-out
-    SF->>R: N × research.task.dispatched
-    R->>EB: research.task.completed (×N)
-    SF->>EB: research.all_completed
-
-    EB->>S: via SQS
-    S->>S: Synthesize report
-    S->>API: Update job (status: completed)
-    S->>EB: synthesis.completed
-    S-->>UI: final result via SSE
+    SqsConsumer <|-- StageWorker
+    StageWorker <|-- IntakeWorker
+    StageWorker <|-- PreprocessingWorker
+    StageWorker <|-- PlanningWorker
+    StageWorker <|-- AnnotationWorker
+    StageWorker <|-- ExportWorker
+    StageWorker <|-- DlqWorker
 ```
+
+| Layer           | File                      | Role                                                                                                     |
+| --------------- | ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **SqsConsumer** | `workers/base.py`         | Resolve queue URL, long-poll, ack/delete on success                                                      |
+| **StageWorker** | `workers/stage_worker.py` | DB session + publisher wiring; on `ValueError`/`RuntimeError` → mark job failed + emit `pipeline.failed` |
+| **Stage logic** | `stages/*.py`             | Idempotent business logic, OTEL spans, Postgres writes, next event publish                               |
+| **Bootstrap**   | `workers/bootstrap.py`    | `main(WorkerClass)` — OTEL init + asyncio run loop                                                       |
+
+**Message parsing (two steps):**
+
+1. **Worker (happy path):** `parse_eventbridge_sqs_body` → stage-specific `parse_*_event` → typed Pydantic model → `run_*`.
+2. **StageWorker (error path only):** re-parse SQS body → `parse_failed_event_detail` → generic `EventEnvelope` so failures can be recorded even if the worker failed mid-parse.
+
+`DlqWorker` sets `record_terminal_failures = False` (DLQ messages are already terminal).
+
+### 3.3 Annotation fan-out modes
+
+| Mode                           | Config                                     | Behavior                                                                                                                                      |
+| ------------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sequential (default local)** | `ANNOTATION_ORCHESTRATION_MODE=sequential` | `AnnotationWorker` handles `planning.completed`, dispatches N `annotation.task.dispatched` events, then processes each task on the same queue |
+| **Step Functions**             | `step_functions`                           | Worker skips `planning.completed`; LocalStack SF Map sends `annotation.task.dispatched` with optional task token                              |
+
+Annotation and export workers wrap stage calls with **`run_with_cost_cap_handling`** (`workers/cost_cap.py`) when `JOB_MAX_COST_USD` is set.
+
+### 3.4 Preprocessing notes (text + audio)
+
+| Asset type                    | Preprocessing                                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `.txt`, `.md`, `.pdf`         | Extract text → character-chunk segments                                                                           |
+| `.wav` (`support_call_audio`) | Local **faster-whisper** ASR → LLM speaker roles → agent/customer turn segments; Whisper model cached per worker process (`get_asr_provider`) |
 
 ---
 
-## 4. Data Flow
+## 4. Frontend & API (summary)
 
-```mermaid
-flowchart LR
-    subgraph Input
-        Q[User Query]
-    end
+| Component                | Responsibility                                  |
+| ------------------------ | ----------------------------------------------- |
+| `app/projects/new`       | Upload + schema template picker                 |
+| `app/projects/[id]`      | React Flow pipeline + QC panel + JSONL download |
+| `hooks/useJobStream`     | SSE keyed by `correlation_id`                   |
+| `api/routes/projects.py` | `POST/GET /api/v1/projects`, export download    |
+| `api/routes/stream.py`   | `GET /api/v1/projects/{id}/stream`              |
 
-    subgraph Processing
-        DOC[Raw Documents]
-        CHK[Chunks]
-        EMB[Embeddings]
-        KG[Knowledge Extracts]
-        RES[Research Notes]
-        SYN[Synthesis]
-    end
-
-    subgraph Storage
-        S3R[(S3: raw)]
-        PGR[(Postgres: metadata + vectors)]
-        S3S[(S3: report)]
-    end
-
-    Q --> DOC
-    DOC --> S3R
-    DOC --> CHK
-    CHK --> EMB
-    EMB --> PGR
-    EMB --> KG
-    KG --> PGR
-    KG --> RES
-    RES --> PGR
-    RES --> SYN
-    SYN --> PGR
-    SYN --> S3S
-```
+API publishes `project.submitted` after multipart upload; it does **not** run stage logic inline.
 
 ---
 
-## 5. Idempotency & Resilience
+## 5. Data stores
+
+| Store          | Data                                                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Postgres**   | Users, jobs (projects), stages, assets, segments, annotation tasks/batches, exports, `processed_events`, `llm_usage` |
+| **Local disk** | Uploaded files under `./data/uploads/{project_id}/`                                                                  |
+
+pgvector and S3 are **not** used in the dataset pivot (removed / not maintained).
+
+---
+
+## 6. Idempotency & resilience
 
 ### Idempotency
 
@@ -249,98 +207,77 @@ flowchart LR
 processed_events(event_id PK, worker_name, processed_at)
 ```
 
-Before processing, worker checks `event_id`. If exists → ack message, skip. Insert within same DB transaction as side effects.
+Each stage claims `event_id` before side effects. Duplicate SQS delivery → skip and ack.
 
-### Retry Policy
+### Retry & failure
 
-| Layer          | Policy                                                         |
-| -------------- | -------------------------------------------------------------- |
-| SQS            | `maxReceiveCount: 3`, visibility timeout ≥ p99 processing time |
-| DLQ            | `eventforge-dlq` — alert on CloudWatch metric                  |
-| Step Functions | Retry on `States.TaskFailed` with backoff                      |
-| LLM calls      | 3 retries, exponential backoff, circuit breaker per provider   |
-
-### Failure Handling
-
-On terminal failure:
-
-1. Update job stage → `failed` with error detail
-2. Emit `pipeline.failed` event
-3. Message in DLQ
-4. SSE pushes failure to UI (red node in React Flow)
-
----
-
-## 6. Security Model
-
-| Layer   | Approach                                                                 |
-| ------- | ------------------------------------------------------------------------ |
-| Auth    | Mock user via `get_current_user` on every request (ADR-013)              |
-| API     | Rate limiting per user (Redis or in-memory local)                        |
-| Data    | `user_id` on all job rows; queries scoped in repository layer            |
-| Secrets | AWS Secrets Manager in prod; `.env` local only                           |
-| Network | Private subnets for workers/RDS; ALB for API only                        |
-| IAM     | Least-privilege per worker role (SQS consume, EB publish, S3 read/write) |
+| Layer                 | Policy                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------- |
+| SQS                   | `maxReceiveCount: 3` → `eventforge-dlq`                                                                 |
+| Stage terminal errors | `ValueError` / `RuntimeError` → job marked failed, `pipeline.failed`, message acked (no DLQ retry loop) |
+| Other exceptions      | Message left for SQS retry → DLQ                                                                        |
+| DLQ                   | `DlqWorker` emits `pipeline.failed`, updates job/stage                                                  |
+| LLM                   | Retries + circuit breaker; optional per-job cost cap                                                    |
 
 ---
 
 ## 7. Observability
 
-```mermaid
-flowchart LR
-    APP[FastAPI + Workers] -->|OTLP gRPC| COL[OTEL Collector]
-    COL --> TRACE[Traces]
-    COL --> MET[Metrics]
-    COL --> LOG[Logs]
-    TRACE --> XRAY[AWS X-Ray / Grafana Tempo]
-    MET --> CW[CloudWatch / Prometheus]
-    LOG --> CW2[CloudWatch Logs]
-```
+Spans: `agent.{stage}.{action}` (e.g. `agent.asr.transcribe`, `agent.preprocessing.process`).
 
-**Span naming:** `agent.{name}.{action}` e.g. `agent.ingestion.fetch_sources`
+Required context: `correlation_id`, `job_id`, `event_id`.
 
-**Required attributes:** `correlation_id`, `job_id`, `event_id`, `agent_name`, `model`, `token_count`
+Local: OTEL collector + Jaeger (`http://localhost:16686`). Search by `correlation_id` from the project create response.
 
 ---
 
-## 8. Local vs Production
+## 8. Local development
 
-| Concern             | Local (Docker Compose)          | Production (AWS)                          |
-| ------------------- | ------------------------------- | ----------------------------------------- |
-| EventBridge         | LocalStack                      | AWS EventBridge                           |
-| SQS                 | LocalStack                      | AWS SQS                                   |
-| Step Functions      | LocalStack (limited)            | AWS Step Functions                        |
-| Postgres            | Docker postgres:16              | RDS PostgreSQL                            |
-| Postgres + pgvector | Docker `pgvector/pgvector:pg16` | RDS PostgreSQL with `vector` extension    |
-| Workers             | `docker compose` sidecar        | ECS Fargate (auto-scaling on queue depth) |
-| API                 | Uvicorn hot-reload              | ECS Fargate behind ALB                    |
-| Frontend            | `next dev`                      | Vercel or CloudFront + S3                 |
-| OTEL                | Local collector container       | ADOT sidecar → Grafana Cloud              |
+| Concern           | Local                                      |
+| ----------------- | ------------------------------------------ |
+| EventBridge / SQS | LocalStack                                 |
+| Postgres          | Docker `postgres:16`                       |
+| Workers           | `make workers` → 6 processes from Procfile |
+| API               | `uvicorn eventforge.main:app --reload`     |
+| Frontend          | `npm run dev`                              |
+
+Detail: [`LOCAL_DEV.md`](./LOCAL_DEV.md)
 
 ---
 
-## 9. Key Design Decisions
+## 9. Key design decisions
 
-See `docs/TECH_DECISIONS.md` for full ADRs. Summary:
+See [`TECH_DECISIONS.md`](./TECH_DECISIONS.md). Summary:
 
-1. **Hybrid stack** — Next.js for UX, Python for AI/agent ecosystem
-2. **EventBridge over direct HTTP** — decoupling, replay, audit trail
-3. **SQS per stage** — independent scaling and failure domains
-4. **Step Functions for fan-out** — visual workflow, built-in retry/wait
-5. **pgvector in Postgres** — single store for MVP; dedicated vector DB (Qdrant) as future scale path
-6. **SSE over WebSocket** — unidirectional updates sufficient for MVP
+1. **Event-first** — stages decoupled via EventBridge + SQS
+2. **One queue per stage** — independent failure domains
+3. **StageWorker base** — shared SQS wiring + terminal failure recording
+4. **Business logic in `stages/`** — workers stay thin adapters
+5. **SSE for UI** — unidirectional pipeline updates (ADR-010)
+6. **Local-only pivot** — no maintained AWS deploy (ADR-015)
 
 ---
 
-## 10. API Surface (Planned)
+## 10. API surface (current)
 
 ```
-POST   /api/v1/queries              # Submit research query
-GET    /api/v1/queries              # List user's queries
-GET    /api/v1/queries/{id}         # Get job detail + result
-GET    /api/v1/queries/{id}/stream  # SSE pipeline events
-GET    /api/v1/queries/{id}/cost    # LLM cost breakdown
-POST   /api/v1/admin/dlq/replay     # Replay DLQ message (admin)
-GET    /api/v1/health               # Health check
-GET    /api/v1/health/ready         # Readiness (DB + pgvector, EB)
+POST   /api/v1/projects              # Multipart upload + schema template
+GET    /api/v1/projects              # List projects
+GET    /api/v1/projects/{id}         # Detail + stages + QC
+GET    /api/v1/projects/{id}/stream  # SSE pipeline events
+GET    /api/v1/projects/{id}/export  # JSONL or ?format=qc
+GET    /api/v1/health
+GET    /api/v1/health/ready
 ```
+
+OpenAPI: `shared/openapi/eventforge-api.yaml`
+
+---
+
+## Appendix — Legacy research pipeline (archived)
+
+Pre-pivot EventForge used a **research/RAG** flow (`query.submitted` → ingestion → embedding → knowledge mining → research fan-out → synthesis) with pgvector, Tavily, and ECS deploy. That code path was removed during pivot Phases 6–9.
+
+Do not extend the legacy design. For historical context only, see git history before 2026-08 and archived docs in [`TASKS.md`](./TASKS.md) / [`PRD.md`](./PRD.md).
+
+**AWS deploy (Phase 5):** full Terraform/ECS topology with Mermaid diagrams — [`AWS_ARCHITECTURE.md`](./AWS_ARCHITECTURE.md).

@@ -183,7 +183,27 @@ make verify-audio
 
 Fixtures: `fixtures/support-calls-audio/` · ADR: `docs/TECH_DECISIONS.md` (ADR-016)
 
+**What works today:** local faster-whisper → time-window segments → LLM labels → JSONL with `audio_uri`, `start_ms`, `end_ms`, and `asr_avg_logprob` in provenance (Whisper average log-probability in log-space — not a 0–1 score). QC + label summary on the project page.
+
 OpenAPI docs: http://localhost:8000/docs · regenerate frontend types: `make openapi`
+
+---
+
+## What I'd improve next
+
+The pipeline is **demo-ready** for “upload WAV → labeled JSONL with time ranges.” These are the gaps I'd tackle for production-quality training data or client-specific schemas — not blockers for the portfolio.
+
+| Area | Today | Improvement |
+| ---- | ----- | ----------- |
+| **Label schema** | `support_call_audio` reuses the same four fields as text support calls (`emotion`, `intent`, `topic`, `resolution_status`) | Add a **`sales_call_audio`** template (or stricter **enums**) so labels like `purchase` / `objection` are consistent, not free-form LLM wording |
+| **Custom schemas** | Templates + optional JSON schema override on upload | Document BeatPulse-style flows: clients bring their own schema; templates stay presets |
+| **Segmentation** | LLM **agent/customer** roles on Whisper utterances → one segment per speaker turn | Acoustic diarization for mixed utterances; sales-specific call-phase windows |
+| **ASR quality** | `faster-whisper/small` on CPU; provenance uses honest `asr_avg_logprob` | Larger model, GPU, or cloud ASR for harder audio; optional word-level timestamps |
+| **PII** | Transcripts include addresses, phones, card numbers as spoken | Redaction/masking step before export for anything leaving local dev |
+| **Resolution labels** | LLM often leaves late segments as `pending` even when the call is closing | Tighter enums + prompt tuning, or windowing that aligns with call phases |
+| **QC** | Flags LLM label confidence and empty transcripts | ASR-quality heuristics (e.g. very low avg logprob), PII detection flags |
+
+**No change required** for the current portfolio story unless you want sales-specific labels or stricter analytics on the demo WAV.
 
 ---
 
@@ -226,6 +246,7 @@ event-driven/
 | [`docs/DATASET_PLATFORM.md`](./docs/DATASET_PLATFORM.md) | **Target product** — pipeline, schema templates, terminology |
 | [`docs/PIVOT_PLAN.md`](./docs/PIVOT_PLAN.md)             | **Active roadmap** — phase checklist and progress            |
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)         | System design, event flows, diagrams                         |
+| [`docs/AWS_ARCHITECTURE.md`](./docs/AWS_ARCHITECTURE.md) | Archived AWS ECS + Terraform (Phase 5 portfolio reference)   |
 | [`docs/TECH_DECISIONS.md`](./docs/TECH_DECISIONS.md)     | ADRs (pivot ADR-014, local-only ADR-015)                     |
 | [`docs/LOCAL_DEV.md`](./docs/LOCAL_DEV.md)               | Troubleshooting and worker setup                             |
 | [`docs/CICD.md`](./docs/CICD.md)                         | Active CI + archived AWS deploy reference                    |

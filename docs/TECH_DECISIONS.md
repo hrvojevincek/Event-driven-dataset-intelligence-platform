@@ -515,9 +515,9 @@ Phase 5 built Terraform modules for ECS, RDS, EventBridge, etc. During the datas
 - **Domain:** project domain `"audio"` (`Job.domain`) with `schema_template = "support_call_audio"` (shared label schema with text support calls)
 - **ASR:** `faster-whisper` local default; `ASR_PROVIDER=openai` opt-in (Phase 2)
 - **Offsets:** `Segment.start_offset` / `end_offset` store **milliseconds** for audio; character offsets for documents
-- **Segments:** Merge/split Whisper utterances into ~15–45s windows before planning
-- **Export:** Keep `content`; add `audio_uri`, `start_ms`, `end_ms` for audio domain only
-- **Limits:** 5-minute max duration at intake; no diarization; LLM sees transcript text only
+- **Segments:** LLM classifies each Whisper utterance as `agent` or `customer`, then merges adjacent same-speaker spans into turns (soft max ~60s per turn)
+- **Export:** Keep `content`; add `audio_uri`, `start_ms`, `end_ms`, and top-level `speaker` for audio domain only
+- **Limits:** 5-minute max duration at intake; no acoustic diarization; speaker roles inferred from transcript dialogue
 
 ---
 

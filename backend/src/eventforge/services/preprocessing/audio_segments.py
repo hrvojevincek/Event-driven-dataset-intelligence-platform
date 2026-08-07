@@ -1,14 +1,14 @@
-"""Merge ASR utterances into annotation-sized audio segment windows."""
+"""Merge ASR utterances into speaker-turn audio segments."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from eventforge.services.preprocessing.asr import Utterance
 
-DEFAULT_MIN_WINDOW_MS = 15_000
-DEFAULT_MAX_WINDOW_MS = 45_000
+SpeakerRole = Literal["agent", "customer"]
+DEFAULT_MAX_TURN_MS = 60_000
 
 
 @dataclass(frozen=True)
@@ -22,68 +22,41 @@ class AudioSegmentPiece:
     metadata_json: dict[str, Any]
 
 
-def window_utterances(
+def build_speaker_turns(
     utterances: list[Utterance],
+    roles: list[SpeakerRole],
     *,
     asr_model: str,
-    min_window_ms: int = DEFAULT_MIN_WINDOW_MS,
-    max_window_ms: int = DEFAULT_MAX_WINDOW_MS,
+    max_turn_ms: int = DEFAULT_MAX_TURN_MS,
 ) -> list[AudioSegmentPiece]:
-    """Merge or split utterances into stable ~15–45s transcript windows."""
-    if min_window_ms <= 0 or max_window_ms <= 0 or min_window_ms > max_window_ms:
-        msg = "invalid audio window bounds"
+    """Merge consecutive same-speaker utterances into annotation turns."""
+    if max_turn_ms <= 0:
+        msg = "invalid max turn duration"
+        raise ValueError(msg)
+    if len(roles) != len(utterances):
+        msg = "role count must match utterance count"
         raise ValueError(msg)
 
-    expanded = _expand_long_utterances(utterances, max_window_ms=max_window_ms)
-    if not expanded:
+    normalized = _normalize_utterances(utterances)
+    if not normalized:
         return []
 
-    windows: list[tuple[list[Utterance], int, int]] = []
-    buffer: list[Utterance] = []
-    buffer_start = expanded[0].start_ms
-    buffer_end = expanded[0].end_ms
-
-    for utterance in expanded:
-        if not buffer:
-            buffer = [utterance]
-            buffer_start = utterance.start_ms
-            buffer_end = utterance.end_ms
-            continue
-
-        candidate_end = utterance.end_ms
-        candidate_duration = candidate_end - buffer_start
-        if candidate_duration <= max_window_ms:
-            buffer.append(utterance)
-            buffer_end = candidate_end
-            continue
-
-        windows.append((buffer, buffer_start, buffer_end))
-        buffer = [utterance]
-        buffer_start = utterance.start_ms
-        buffer_end = utterance.end_ms
-
-    if buffer:
-        windows.append((buffer, buffer_start, buffer_end))
-
-    merged = _merge_trailing_short_window(
-        windows,
-        min_window_ms=min_window_ms,
-        max_window_ms=max_window_ms,
-    )
+    turns = _group_by_speaker(normalized, roles)
+    split_turns = _split_long_turns(turns, max_turn_ms=max_turn_ms)
 
     pieces: list[AudioSegmentPiece] = []
-    for index, (window, start_ms, end_ms) in enumerate(merged):
+    for index, (window, speaker, start_ms, end_ms) in enumerate(split_turns):
         content = " ".join(part.text for part in window).strip()
         if not content:
             continue
         avg_logprob = _average_logprob(window)
         metadata: dict[str, Any] = {
-            "kind": "audio_utterance",
+            "kind": "audio_turn",
+            "speaker": speaker,
             "asr_model": asr_model,
             "utterance_count": len(window),
         }
         if avg_logprob is not None:
-            # faster-whisper avg_logprob is log-space, not 0–1 confidence
             metadata["asr_avg_logprob"] = round(avg_logprob, 4)
         pieces.append(
             AudioSegmentPiece(
@@ -97,86 +70,88 @@ def window_utterances(
     return pieces
 
 
-def _expand_long_utterances(
-    utterances: list[Utterance],
-    *,
-    max_window_ms: int,
-) -> list[Utterance]:
-    expanded: list[Utterance] = []
+def _normalize_utterances(utterances: list[Utterance]) -> list[Utterance]:
+    normalized: list[Utterance] = []
     for utterance in utterances:
         text = utterance.text.strip()
         if not text:
             continue
-        duration = utterance.end_ms - utterance.start_ms
-        if duration <= max_window_ms:
-            expanded.append(
-                Utterance(
-                    text=text,
-                    start_ms=utterance.start_ms,
-                    end_ms=utterance.end_ms,
-                    avg_logprob=utterance.avg_logprob,
-                )
+        normalized.append(
+            Utterance(
+                text=text,
+                start_ms=utterance.start_ms,
+                end_ms=utterance.end_ms,
+                avg_logprob=utterance.avg_logprob,
             )
-            continue
-        words = text.split()
-        if len(words) < 2:
-            expanded.append(
-                Utterance(
-                    text=text,
-                    start_ms=utterance.start_ms,
-                    end_ms=utterance.end_ms,
-                    avg_logprob=utterance.avg_logprob,
-                )
-            )
-            continue
-        chunk_count = max(2, (duration + max_window_ms - 1) // max_window_ms)
-        words_per_chunk = max(1, len(words) // chunk_count)
-        for chunk_index in range(chunk_count):
-            start_word = chunk_index * words_per_chunk
-            if chunk_index == chunk_count - 1:
-                end_word = len(words)
-            else:
-                end_word = (chunk_index + 1) * words_per_chunk
-            chunk_words = words[start_word:end_word]
-            if not chunk_words:
-                continue
-            span_start = utterance.start_ms + int(duration * (start_word / len(words)))
-            span_end = utterance.start_ms + int(duration * (end_word / len(words)))
-            expanded.append(
-                Utterance(
-                    text=" ".join(chunk_words),
-                    start_ms=span_start,
-                    end_ms=max(span_end, span_start + 1),
-                    avg_logprob=utterance.avg_logprob,
-                )
-            )
-    return expanded
+        )
+    return normalized
 
 
-def _merge_trailing_short_window(
-    windows: list[tuple[list[Utterance], int, int]],
+def _group_by_speaker(
+    utterances: list[Utterance],
+    roles: list[SpeakerRole],
+) -> list[tuple[list[Utterance], SpeakerRole, int, int]]:
+    turns: list[tuple[list[Utterance], SpeakerRole, int, int]] = []
+    buffer: list[Utterance] = []
+    buffer_role: SpeakerRole | None = None
+    buffer_start = 0
+    buffer_end = 0
+
+    for utterance, role in zip(utterances, roles, strict=True):
+        if not buffer:
+            buffer = [utterance]
+            buffer_role = role
+            buffer_start = utterance.start_ms
+            buffer_end = utterance.end_ms
+            continue
+
+        if role == buffer_role:
+            buffer.append(utterance)
+            buffer_end = utterance.end_ms
+            continue
+
+        turns.append((buffer, buffer_role, buffer_start, buffer_end))
+        buffer = [utterance]
+        buffer_role = role
+        buffer_start = utterance.start_ms
+        buffer_end = utterance.end_ms
+
+    if buffer and buffer_role is not None:
+        turns.append((buffer, buffer_role, buffer_start, buffer_end))
+    return turns
+
+
+def _split_long_turns(
+    turns: list[tuple[list[Utterance], SpeakerRole, int, int]],
     *,
-    min_window_ms: int,
-    max_window_ms: int,
-) -> list[tuple[list[Utterance], int, int]]:
-    if len(windows) < 2:
-        return windows
+    max_turn_ms: int,
+) -> list[tuple[list[Utterance], SpeakerRole, int, int]]:
+    split: list[tuple[list[Utterance], SpeakerRole, int, int]] = []
+    for window, speaker, start_ms, end_ms in turns:
+        if end_ms - start_ms <= max_turn_ms:
+            split.append((window, speaker, start_ms, end_ms))
+            continue
 
-    merged = list(windows)
-    last_window, last_start, last_end = merged[-1]
-    if (last_end - last_start) >= min_window_ms:
-        return merged
-
-    prev_window, prev_start, prev_end = merged[-2]
-    combined_duration = last_end - prev_start
-    if combined_duration <= max_window_ms:
-        merged[-2] = (prev_window + last_window, prev_start, last_end)
-        merged.pop()
-    return merged
+        chunk: list[Utterance] = []
+        chunk_start = window[0].start_ms
+        chunk_end = window[0].end_ms
+        for utterance in window:
+            candidate_end = utterance.end_ms
+            if chunk and candidate_end - chunk_start > max_turn_ms:
+                split.append((chunk, speaker, chunk_start, chunk_end))
+                chunk = [utterance]
+                chunk_start = utterance.start_ms
+                chunk_end = utterance.end_ms
+                continue
+            chunk.append(utterance)
+            chunk_end = utterance.end_ms
+        if chunk:
+            split.append((chunk, speaker, chunk_start, chunk_end))
+    return split
 
 
 def _average_logprob(window: list[Utterance]) -> float | None:
-    """Mean utterance avg_logprob across the window (log-space, typically ≤ 0)."""
+    """Mean utterance avg_logprob across the turn (log-space, typically ≤ 0)."""
     values = [item.avg_logprob for item in window if item.avg_logprob is not None]
     if not values:
         return None
