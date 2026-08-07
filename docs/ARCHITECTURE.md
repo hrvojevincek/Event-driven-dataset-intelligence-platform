@@ -46,7 +46,7 @@ flowchart TB
 
     subgraph Data
         PG[(Postgres 16)]
-        DISK[S3 or (Local uploads ./data/uploads/)]
+        DISK[Local uploads ./data/uploads/]
     end
 
     subgraph Obs["Observability"]

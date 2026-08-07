@@ -37,11 +37,11 @@ def build_speaker_turns(
         msg = "role count must match utterance count"
         raise ValueError(msg)
 
-    normalized = _normalize_utterances(utterances)
-    if not normalized:
+    paired = _paired_utterances(utterances, roles)
+    if not paired:
         return []
 
-    turns = _group_by_speaker(normalized, roles)
+    turns = _group_by_speaker(paired)
     split_turns = _split_long_turns(turns, max_turn_ms=max_turn_ms)
 
     pieces: list[AudioSegmentPiece] = []
@@ -70,26 +70,31 @@ def build_speaker_turns(
     return pieces
 
 
-def _normalize_utterances(utterances: list[Utterance]) -> list[Utterance]:
-    normalized: list[Utterance] = []
-    for utterance in utterances:
+def _paired_utterances(
+    utterances: list[Utterance],
+    roles: list[SpeakerRole],
+) -> list[tuple[Utterance, SpeakerRole]]:
+    paired: list[tuple[Utterance, SpeakerRole]] = []
+    for utterance, role in zip(utterances, roles, strict=True):
         text = utterance.text.strip()
         if not text:
             continue
-        normalized.append(
-            Utterance(
-                text=text,
-                start_ms=utterance.start_ms,
-                end_ms=utterance.end_ms,
-                avg_logprob=utterance.avg_logprob,
+        paired.append(
+            (
+                Utterance(
+                    text=text,
+                    start_ms=utterance.start_ms,
+                    end_ms=utterance.end_ms,
+                    avg_logprob=utterance.avg_logprob,
+                ),
+                role,
             )
         )
-    return normalized
+    return paired
 
 
 def _group_by_speaker(
-    utterances: list[Utterance],
-    roles: list[SpeakerRole],
+    paired: list[tuple[Utterance, SpeakerRole]],
 ) -> list[tuple[list[Utterance], SpeakerRole, int, int]]:
     turns: list[tuple[list[Utterance], SpeakerRole, int, int]] = []
     buffer: list[Utterance] = []
@@ -97,7 +102,7 @@ def _group_by_speaker(
     buffer_start = 0
     buffer_end = 0
 
-    for utterance, role in zip(utterances, roles, strict=True):
+    for utterance, role in paired:
         if not buffer:
             buffer = [utterance]
             buffer_role = role
@@ -132,10 +137,11 @@ def _split_long_turns(
             split.append((window, speaker, start_ms, end_ms))
             continue
 
+        expanded = _expand_oversized_utterances(window, max_turn_ms=max_turn_ms)
         chunk: list[Utterance] = []
-        chunk_start = window[0].start_ms
-        chunk_end = window[0].end_ms
-        for utterance in window:
+        chunk_start = expanded[0].start_ms
+        chunk_end = expanded[0].end_ms
+        for utterance in expanded:
             candidate_end = utterance.end_ms
             if chunk and candidate_end - chunk_start > max_turn_ms:
                 split.append((chunk, speaker, chunk_start, chunk_end))
@@ -143,11 +149,52 @@ def _split_long_turns(
                 chunk_start = utterance.start_ms
                 chunk_end = utterance.end_ms
                 continue
+            if not chunk:
+                chunk_start = utterance.start_ms
             chunk.append(utterance)
             chunk_end = utterance.end_ms
         if chunk:
             split.append((chunk, speaker, chunk_start, chunk_end))
     return split
+
+
+def _expand_oversized_utterances(
+    utterances: list[Utterance],
+    *,
+    max_turn_ms: int,
+) -> list[Utterance]:
+    expanded: list[Utterance] = []
+    for utterance in utterances:
+        duration = utterance.end_ms - utterance.start_ms
+        if duration <= max_turn_ms:
+            expanded.append(utterance)
+            continue
+        words = utterance.text.split()
+        if len(words) < 2:
+            expanded.append(utterance)
+            continue
+        chunk_count = max(2, (duration + max_turn_ms - 1) // max_turn_ms)
+        words_per_chunk = max(1, len(words) // chunk_count)
+        for chunk_index in range(chunk_count):
+            start_word = chunk_index * words_per_chunk
+            if chunk_index == chunk_count - 1:
+                end_word = len(words)
+            else:
+                end_word = (chunk_index + 1) * words_per_chunk
+            chunk_words = words[start_word:end_word]
+            if not chunk_words:
+                continue
+            span_start = utterance.start_ms + int(duration * (start_word / len(words)))
+            span_end = utterance.start_ms + int(duration * (end_word / len(words)))
+            expanded.append(
+                Utterance(
+                    text=" ".join(chunk_words),
+                    start_ms=span_start,
+                    end_ms=max(span_end, span_start + 1),
+                    avg_logprob=utterance.avg_logprob,
+                )
+            )
+    return expanded
 
 
 def _average_logprob(window: list[Utterance]) -> float | None:

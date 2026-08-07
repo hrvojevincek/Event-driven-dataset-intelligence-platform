@@ -123,6 +123,8 @@ def test_build_annotation_tasks_batches_audio_support_call_segments() -> None:
     assert len(planned) == 2
     assert len(planned[0].segment_ids) == 5
     assert len(planned[1].segment_ids) == 2
+    assert planned[0].segment_ids == [segment.id for segment in segments[:5]]
+    assert planned[1].segment_ids == [segment.id for segment in segments[5:]]
 
 
 def test_build_annotation_tasks_batches_document_segments() -> None:

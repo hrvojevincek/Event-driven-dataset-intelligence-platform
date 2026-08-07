@@ -124,6 +124,14 @@ class Settings(BaseSettings):
             raise ValueError(msg)
         return value
 
+    @field_validator("asr_max_turn_ms")
+    @classmethod
+    def _positive_asr_turn_duration(cls, value: int) -> int:
+        if value <= 0:
+            msg = "must be > 0"
+            raise ValueError(msg)
+        return value
+
     @model_validator(mode="after")
     def _retry_delays_ordered(self) -> Self:
         if self.llm_retry_base_delay_seconds > self.llm_retry_max_delay_seconds:

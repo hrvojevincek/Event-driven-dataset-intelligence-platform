@@ -183,7 +183,7 @@ make verify-audio
 
 Fixtures: `fixtures/support-calls-audio/` · ADR: `docs/TECH_DECISIONS.md` (ADR-016)
 
-**What works today:** local faster-whisper → time-window segments → LLM labels → JSONL with `audio_uri`, `start_ms`, `end_ms`, and `asr_avg_logprob` in provenance (Whisper average log-probability in log-space — not a 0–1 score). QC + label summary on the project page.
+**What works today:** local faster-whisper → LLM speaker roles → agent/customer turn segments → LLM labels → JSONL with `audio_uri`, `speaker`, `start_ms`, `end_ms`, and `asr_avg_logprob` in provenance (Whisper average log-probability in log-space — not a 0–1 score). QC + label summary on the project page.
 
 OpenAPI docs: http://localhost:8000/docs · regenerate frontend types: `make openapi`
 

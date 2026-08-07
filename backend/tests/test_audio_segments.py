@@ -73,3 +73,38 @@ def test_build_speaker_turns_splits_long_turn_at_utterance_boundary() -> None:
 
 def test_build_speaker_turns_returns_empty_for_blank_transcript() -> None:
     assert build_speaker_turns([], [], asr_model="mock/test") == []
+
+
+def test_build_speaker_turns_skips_blank_utterance_and_keeps_roles() -> None:
+    utterances = [
+        Utterance("   ", 0, 2_000, -0.2),
+        Utterance("Customer line.", 2_000, 6_000, -0.3),
+    ]
+    roles = ["agent", "customer"]
+
+    pieces = build_speaker_turns(
+        utterances,
+        roles,
+        asr_model="mock/test",
+    )
+
+    assert len(pieces) == 1
+    assert pieces[0].metadata_json["speaker"] == "customer"
+    assert pieces[0].content == "Customer line."
+
+
+def test_build_speaker_turns_splits_single_oversized_utterance() -> None:
+    words = " ".join(f"word{i}" for i in range(20))
+    utterances = [Utterance(words, 0, 90_000, -0.2)]
+    roles = ["agent"]
+
+    pieces = build_speaker_turns(
+        utterances,
+        roles,
+        asr_model="mock/test",
+        max_turn_ms=60_000,
+    )
+
+    assert len(pieces) >= 2
+    assert all(piece.metadata_json["speaker"] == "agent" for piece in pieces)
+    assert all(piece.end_ms - piece.start_ms <= 60_000 for piece in pieces)
